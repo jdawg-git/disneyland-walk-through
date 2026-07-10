@@ -11,6 +11,11 @@ export interface HudDeps {
   readonly scavenger: ScavengerSystem;
   readonly zones: ZoneTracker;
   readonly guide: GuideSystem;
+  readonly crowd: {
+    readonly label: () => string;
+    readonly date: () => string;
+    readonly setDate: (d: string) => void;
+  };
   readonly guideContext: () => GuideContext;
 }
 
@@ -37,7 +42,7 @@ export function createHud(deps: HudDeps): void {
         <label>Visit date</label>
         <input type="date" id="hud-date" />
       </div>
-      <div class="hud-row"><span id="hud-crowd-label">Crowds: coming soon</span></div>
+      <div class="hud-row"><span id="hud-crowd-label"></span></div>
       <div class="hud-row">
         <label>Audio</label>
         <span>
@@ -99,9 +104,17 @@ export function createHud(deps: HudDeps): void {
   });
   refreshDayNight();
 
-  // --- date picker (crowd model lands in stage 5) ---
+  // --- date picker → crowd model ---
   const dateInput = el<HTMLInputElement>("hud-date");
-  dateInput.value = new Date().toISOString().slice(0, 10);
+  const crowdLabel = el<HTMLSpanElement>("hud-crowd-label");
+  dateInput.value = deps.crowd.date();
+  crowdLabel.textContent = deps.crowd.label();
+  dateInput.addEventListener("change", () => {
+    if (dateInput.value) {
+      deps.crowd.setDate(dateInput.value);
+      crowdLabel.textContent = deps.crowd.label();
+    }
+  });
 
   // --- audio ---
   const muteButton = el<HTMLButtonElement>("hud-mute");

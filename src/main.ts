@@ -7,9 +7,11 @@ import { startLoop } from "./engine/loop";
 import { parseParams, type AppParams } from "./engine/params";
 import { createRenderer } from "./engine/renderer";
 import { AudioZoneSystem } from "./systems/audioZones";
+import { crowdForecast, npcCount } from "./systems/crowdModel";
 import { GuideSystem } from "./systems/guide";
 import { ScavengerSystem } from "./systems/scavenger";
 import { ZoneTracker } from "./systems/zoneTracker";
+import { CrowdSystem } from "./world/crowd";
 import { buildPark } from "./world/parkBuilder";
 import { WalkableGrid } from "./world/walkable";
 import { createHud } from "./ui/hud";
@@ -53,6 +55,27 @@ function boot(p: AppParams): void {
   const scavenger = new ScavengerSystem(scene);
   const guide = new GuideSystem();
 
+  // Crowd simulation: date picker (or ?date=) → level 1–10 → NPC density.
+  const crowd = new CrowdSystem(scene, p.seed);
+  const today = new Date();
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  let crowdDate = p.date ?? localToday;
+  const crowdHour = p.hour ?? today.getHours();
+  let forecast = crowdForecast(crowdDate);
+  const applyCrowd = (): void => {
+    forecast = crowdForecast(crowdDate);
+    crowd.setCount(npcCount(forecast.level, crowdHour));
+  };
+  applyCrowd();
+  const crowdControl = {
+    label: (): string => forecast.label,
+    date: (): string => crowdDate,
+    setDate: (d: string): void => {
+      crowdDate = d;
+      applyCrowd();
+    },
+  };
+
   // Applied after scene build so registered emissive materials pick it up.
   if (p.time) dayNight.setTime(p.time, true);
 
@@ -78,6 +101,7 @@ function boot(p: AppParams): void {
       scavenger,
       zones,
       guide,
+      crowd: crowdControl,
       guideContext: () => ({
         land: zones.land,
         position: { x: bundle.camera.position.x, z: bundle.camera.position.z },
@@ -102,6 +126,7 @@ function boot(p: AppParams): void {
       dayNight.update(dt);
       zones.update(dt, bundle.camera.position);
       scavenger.update(dt, bundle.camera.position);
+      crowd.update(dt);
     }
     bundle.render(dt);
     frames += 1;
