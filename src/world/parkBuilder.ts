@@ -124,8 +124,9 @@ function generatePropPlacements(seed: number): PropPlacements {
   }
 
   // Hand-placed Main Street double row — the signature promenade.
+  // (Street corridor is only x ≈ −4..11; curbs sit at −3 and 10.)
   for (let z = 130; z <= 260; z += 18) {
-    lamps.push([-7.5, z], [14.5, z]);
+    lamps.push([-3, z], [10, z]);
   }
 
   return { lamps, round, palm, pine };
