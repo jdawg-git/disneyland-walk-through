@@ -78,3 +78,16 @@ Running log of how this project is built and why. Newest decisions at the bottom
   see hipRoofGeometry in trainStation.ts.
 - Guide is a stub (missing-key message + preview reply); real Gemini call is
   stage 7. Audio zones work but placeholders are silent by design.
+
+## Stage 7 — guide notes
+
+- Guide = Gemini `gemini-2.0-flash` via REST, key from VITE_GEMINI_API_KEY
+  (client-side by design for local personal use; move behind a proxy if ever
+  deployed publicly).
+- Every ask() rebuilds the system instruction with a live spatial snapshot
+  (`systems/guideContext.ts`): current land, compass heading, crowds,
+  scavenger progress, and a distance/bearing/relative-direction table over
+  all landmarks + OSM attractions. Directional math is unit-tested
+  (hub → Matterhorn NE, station S, Pirates SW); the live call itself needs a
+  user-provided key to exercise.
+- Chat keeps the last 12 turns; failed requests roll back the user turn.

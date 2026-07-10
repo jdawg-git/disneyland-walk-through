@@ -102,15 +102,20 @@ function boot(p: AppParams): void {
       zones,
       guide,
       crowd: crowdControl,
-      guideContext: () => ({
-        land: zones.land,
-        position: { x: bundle.camera.position.x, z: bundle.camera.position.z },
-        timeOfDay: dayNight.timeOfDay,
-        scavenger: {
-          collected: scavenger.state.collected,
-          total: scavenger.state.total,
-        },
-      }),
+      guideContext: () => {
+        const s = scavenger.state;
+        return {
+          land: zones.land,
+          x: bundle.camera.position.x,
+          z: bundle.camera.position.z,
+          headingDeg: ((-bundle.camera.rotation.y * 180) / Math.PI + 360) % 360,
+          timeOfDay: dayNight.timeOfDay,
+          crowdLabel: forecast.label,
+          scavengerCollected: s.collected,
+          scavengerTotal: s.total,
+          currentClue: s.clue,
+        };
+      },
     });
   }
 
