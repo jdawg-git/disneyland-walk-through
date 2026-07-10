@@ -13,6 +13,6 @@ export interface LandmarkDef {
 }
 
 export const LANDMARKS: readonly LandmarkDef[] = [
-  { key: "castle", osmIds: [], position: [5.8, -12.2] },
-  { key: "trainStation", osmIds: [], position: [2.6, 300.2] },
+  { key: "castle", osmIds: [331440228], position: [5.8, -12.2] },
+  { key: "trainStation", osmIds: [153044358], position: [2.6, 300.2] },
 ];

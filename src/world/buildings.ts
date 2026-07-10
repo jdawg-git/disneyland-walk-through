@@ -90,7 +90,8 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
     mesh.receiveShadow = true;
     scene.add(mesh);
 
-    collectWindowSlots(b, height, rng, windowSlots);
+    // Windows only inside guest areas — backstage mass stays dark.
+    if (land) collectWindowSlots(b, height, rng, windowSlots);
   }
 
   if (windowSlots.length > 0) {

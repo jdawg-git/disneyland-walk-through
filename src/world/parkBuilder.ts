@@ -6,6 +6,7 @@ import { buildBuildings } from "./buildings";
 import { buildCastle } from "./landmarks/castle";
 import { buildTrainStation } from "./landmarks/trainStation";
 import { buildProps, type PropPlacements } from "./props";
+import { buildRailroad } from "./railroad";
 import { buildTerrain } from "./terrain";
 
 /**
@@ -16,11 +17,15 @@ import { buildTerrain } from "./terrain";
  */
 export function buildPark(scene: Scene, seed: number): void {
   buildTerrain(scene);
+  buildRailroad(scene);
 
+  // Full-park blockout: every footprint inside the boundary is extruded.
+  // Buildings inside an authored land get its palette; backstage mass gets
+  // neutral grey via the fallback palette in buildings.ts.
   const skipIds = new Set<number>(LANDMARKS.flatMap((l) => [...l.osmIds]));
   buildBuildings(scene, {
     skipIds,
-    include: (center) => landAt(center[0], center[1]) !== null,
+    include: () => true,
   });
 
   for (const landmark of LANDMARKS) {
