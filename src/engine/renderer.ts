@@ -51,6 +51,9 @@ export function createRenderer(container: HTMLElement, scene: Scene): RendererBu
   renderer.toneMapping = NoToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
+  // Composer passes each call renderer.render(); reset stats once per frame
+  // (in render() below) so renderer.info reflects the whole frame.
+  renderer.info.autoReset = false;
   container.appendChild(renderer.domElement);
 
   const composer = new EffectComposer(renderer, { frameBufferType: HalfFloatType });
@@ -87,6 +90,9 @@ export function createRenderer(container: HTMLElement, scene: Scene): RendererBu
     setBloomIntensity: (intensity: number) => {
       bloom.intensity = intensity;
     },
-    render: (dt: number) => composer.render(dt),
+    render: (dt: number) => {
+      renderer.info.reset();
+      composer.render(dt);
+    },
   };
 }

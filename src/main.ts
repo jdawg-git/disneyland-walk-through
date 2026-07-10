@@ -20,6 +20,7 @@ import { createStartOverlay } from "./ui/overlay";
 declare global {
   interface Window {
     __PARK_READY__?: boolean;
+    __PARK_STATS__?: () => { calls: number; triangles: number };
   }
 }
 
@@ -40,6 +41,10 @@ function boot(p: AppParams): void {
 
   const scene = new Scene();
   const bundle = createRenderer(app, scene);
+  window.__PARK_STATS__ = () => ({
+    calls: bundle.renderer.info.render.calls,
+    triangles: bundle.renderer.info.render.triangles,
+  });
   const dayNight = new DayNightSystem(scene);
   dayNight.bindBloom(bundle.setBloomIntensity);
 

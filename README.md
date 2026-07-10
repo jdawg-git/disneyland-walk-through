@@ -2,10 +2,9 @@
 
 A first-person, walkable, stylized 3D recreation of Disneyland Park (Anaheim)
 that runs in a desktop browser. Low-poly diorama look carried by lighting,
-fog, bloom, and color grading. Built with Three.js + TypeScript + Vite.
-
-> **Status: under construction** — currently at the scaffold stage. This
-> README fills out as the park does.
+fog, bloom, and color grading — night is the showcase. Built with Three.js +
+strict TypeScript + Vite; the park layout is derived from real OpenStreetMap
+data.
 
 ## Run it
 
@@ -14,9 +13,81 @@ npm install
 npm run dev
 ```
 
-Open the printed URL in Chrome. Click to enter the park.
+Open the printed URL in Chrome and click to enter the park. You spawn in
+Town Square looking up Main Street at Sleeping Beauty Castle.
 
-**Controls**: WASD move · mouse look · Shift sprint · N day/night · H hide HUD · Esc release mouse
+**Controls**: WASD move · mouse look · Shift sprint · **N** day/night ·
+**H** hide HUD · Esc release mouse
+
+## What's inside
+
+- **The whole park**: Main Street U.S.A., Adventureland, New Orleans Square,
+  Frontierland, Critter Country, Fantasyland, Mickey's Toontown,
+  Tomorrowland, and the Central Plaza, laid out from real OSM footprints,
+  ringed by the railroad berm (you can't leave the park).
+- **Landmarks**: bespoke Sleeping Beauty Castle, Main Street Station, the
+  Matterhorn, Space Mountain, the Enchanted Tiki Room, Pirates of the
+  Caribbean, the Haunted Mansion, Big Thunder buttes, and it's a small world.
+- **Day/night toggle** with a smooth 4-second transition. At night thousands
+  of emissive windows, string lights, and lamp globes bloom to life and the
+  castle is floodlit.
+- **Per-land music zones** that crossfade as you cross land boundaries.
+- **Historical crowd simulation**: pick a date and the park populates with
+  wandering guests to match (Christmas week is packed; a September Wednesday
+  is blissfully empty).
+- **Scavenger hunt**: 12 golden stars found in sequence, clue by clue, ending
+  with fireworks over the castle.
+- **AI tour guide**: a Gemini-powered guide who knows where you are and gives
+  real directions.
+
+## Custom audio
+
+Silent placeholders ship in `public/audio/` so the app runs as-is. Drop your
+own MP3s into that folder using the exact filenames listed in
+[src/config/audio.ts](src/config/audio.ts) (e.g. `main-street.mp3`,
+`fantasyland.mp3`), or edit that file to point at different paths. Volume and
+mute live in the HUD; audio starts after your first click (browser autoplay
+policy).
+
+## Gemini tour guide key
+
+```bash
+cp .env.example .env
+# paste your key from https://aistudio.google.com/apikey into .env
+```
+
+Restart the dev server. Without a key the guide panel shows setup
+instructions instead of answering; everything else works normally.
+
+> Note: with a local `.env` the key is embedded in the client bundle — fine
+> for personal use. If you ever deploy this publicly, move the Gemini call
+> behind a small server-side proxy.
+
+## Editing the scavenger hunt
+
+Stars and clues live in [src/config/scavenger.ts](src/config/scavenger.ts):
+`position` is `[x, y, z]` in park meters (origin at the hub, +x east,
+−z north), `clue` is the text that points TO that star. Progress persists in
+localStorage; the HUD has a reset button. A unit test
+(`npm test`) validates every star is reachable — run it after editing.
+To find coordinates, open the dev server with `?debug=map` for a top-down
+park map: the cursor readout shows park coordinates and clicking logs them
+to the console.
+
+## Adjusting the crowd model
+
+Everything is in [src/config/crowds.ts](src/config/crowds.ts):
+
+- `MONTH_BASELINE` — month → level 1–10 (calibrate against a live crowd
+  calendar; see the TODO in that file)
+- `DOW_MULTIPLIER` — day-of-week factors (Saturdays busiest)
+- `HOLIDAYS` — absolute overrides for specific dates
+- `TIME_OF_DAY_CURVE` — hourly density (midday peak)
+- `MAX_NPCS` — global cap on rendered guests
+
+Deterministic: the same date always produces the same crowd level, no live
+API involved. Test URLs accept `?date=2026-12-28&hour=14` to reproduce any
+moment.
 
 ## Scripts
 
@@ -24,19 +95,17 @@ Open the printed URL in Chrome. Click to enter the park.
 | --- | --- |
 | `npm run dev` | dev server |
 | `npm run build` | typecheck + production build |
-| `npm run typecheck` | TypeScript strict check |
-| `npm run verify` | headless screenshot suite (day + night per viewpoint) into `verify/` |
+| `npm run typecheck` | TypeScript strict check (zero `any`) |
+| `npm test` | unit tests (crowd model, star placement, guide bearings) |
+| `npm run verify` | headless screenshot suite — every viewpoint in day + night into `verify/` |
 | `npm run gen:audio` | regenerate silent placeholder MP3s |
-| `npm run fetch:osm` | re-fetch the OpenStreetMap park layout (maintenance) |
+| `npm run fetch:osm` | re-fetch the OpenStreetMap layout bake (maintenance) |
 
-## Custom audio
+## Dev URL parameters
 
-Drop your own MP3s into `public/audio/` using the filenames listed in
-`src/config/audio.ts` (e.g. `main-street.mp3`). Silent placeholders ship by
-default, so the app runs without them.
+`?cam=x,y,z,yaw,pitch` fixed camera (no pointer lock) · `&time=day|night` ·
+`&date=YYYY-MM-DD&hour=H` crowd state · `&seed=N` deterministic scatter ·
+`&freeze=1` halt animation · `&hud=0` hide HUD · `?debug=map` top-down
+layout view.
 
-## Gemini tour guide key
-
-Copy `.env.example` to `.env` and paste your key into
-`VITE_GEMINI_API_KEY`. Without a key the guide panel shows setup
-instructions instead of answering; nothing else is affected.
+See [NOTES.md](NOTES.md) for architecture decisions.

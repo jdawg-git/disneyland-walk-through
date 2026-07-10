@@ -91,3 +91,15 @@ Running log of how this project is built and why. Newest decisions at the bottom
   (hub → Matterhorn NE, station S, Pirates SW); the live call itself needs a
   user-provided key to exercise.
 - Chat keeps the last 12 turns; failed requests roll back the user turn.
+
+## Stage 8 — polish & performance
+
+- Building mass is merged per color bucket (walls and roofs split out of each
+  ExtrudeGeometry by group range, then mergeGeometries) — the whole park's
+  624 buildings render in ~45 meshes instead of ~1250. Worst-case frame (hub,
+  night, crowd level 10, shadows + composer): 648 draw calls / 517k tris.
+- renderer.info.autoReset is OFF; the frame loop resets it once per frame so
+  window.__PARK_STATS__() reports whole-frame numbers (each composer pass
+  otherwise resets the counters — measurements read 1 call/1 tri).
+- Main Street rooflines carry instanced string-light bulbs (one InstancedMesh,
+  ~1.3 m spacing) — the signature night look, still zero point lights.

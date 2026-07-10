@@ -1,4 +1,6 @@
 import {
+  BufferAttribute,
+  BufferGeometry,
   Color,
   ExtrudeGeometry,
   InstancedMesh,
@@ -8,8 +10,10 @@ import {
   PlaneGeometry,
   Quaternion,
   Scene,
+  SphereGeometry,
   Vector3,
 } from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { registerEmissive } from "../engine/emissive";
 import { mulberry32 } from "../engine/random";
 import { polygonToShape } from "./shapeUtil";
@@ -40,28 +44,23 @@ export interface BuildingsOptions {
 /**
  * Generic building pass: extrudes OSM footprints with per-land wall/roof
  * palettes and scatters emissive window quads on facades — the night glow
- * source. Bespoke landmarks (castle, stations…) are skipped here.
+ * source. All wall/roof geometry is merged into one mesh PER COLOR, so the
+ * whole park's building mass renders in a few dozen draw calls. Main Street
+ * facades additionally get roofline string lights (instanced bulbs).
  */
 export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
   const windowSlots: WindowSlot[] = [];
-  const wallMaterials = new Map<number, MeshStandardMaterial>();
-  const roofMaterials = new Map<number, MeshStandardMaterial>();
+  const bulbSlots: Vector3[] = [];
+  const wallBuckets = new Map<number, BufferGeometry[]>();
+  const roofBuckets = new Map<number, BufferGeometry[]>();
 
-  const wallMaterial = (color: number): MeshStandardMaterial => {
-    let m = wallMaterials.get(color);
-    if (!m) {
-      m = new MeshStandardMaterial({ color, roughness: 0.9 });
-      wallMaterials.set(color, m);
+  const bucket = (map: Map<number, BufferGeometry[]>, color: number): BufferGeometry[] => {
+    let list = map.get(color);
+    if (!list) {
+      list = [];
+      map.set(color, list);
     }
-    return m;
-  };
-  const roofMaterial = (color: number): MeshStandardMaterial => {
-    let m = roofMaterials.get(color);
-    if (!m) {
-      m = new MeshStandardMaterial({ color, roughness: 0.85 });
-      roofMaterials.set(color, m);
-    }
-    return m;
+    return list;
   };
 
   for (const b of PARK_LAYOUT.buildings) {
@@ -84,14 +83,34 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
     const wallColor = palette.walls[Math.floor(rng() * palette.walls.length)] ?? 0xb0a898;
     const roofColor = palette.roofs[Math.floor(rng() * palette.roofs.length)] ?? 0x6a625a;
 
-    const geometry = buildExtrusion(b, height);
-    const mesh = new Mesh(geometry, [wallMaterial(wallColor), roofMaterial(roofColor)]);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    scene.add(mesh);
+    const { walls, roof } = buildSplitExtrusion(b, height);
+    bucket(wallBuckets, wallColor).push(walls);
+    bucket(roofBuckets, roofColor).push(roof);
 
     // Windows only inside guest areas — backstage mass stays dark.
     if (land) collectWindowSlots(b, height, rng, windowSlots);
+
+    // String lights along Main Street rooflines — the classic night look.
+    if (land?.id === "mainStreet") collectBulbSlots(b, height, bulbSlots);
+  }
+
+  for (const [color, geometries] of wallBuckets) {
+    const merged = mergeGeometries(geometries);
+    if (!merged) continue;
+    const mesh = new Mesh(merged, new MeshStandardMaterial({ color, roughness: 0.9 }));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    for (const g of geometries) g.dispose();
+  }
+  for (const [color, geometries] of roofBuckets) {
+    const merged = mergeGeometries(geometries);
+    if (!merged) continue;
+    const mesh = new Mesh(merged, new MeshStandardMaterial({ color, roughness: 0.85 }));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    for (const g of geometries) g.dispose();
   }
 
   if (windowSlots.length > 0) {
@@ -116,28 +135,65 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
     windows.instanceMatrix.needsUpdate = true;
     scene.add(windows);
   }
+
+  if (bulbSlots.length > 0) {
+    const bulbMaterial = new MeshStandardMaterial({
+      color: 0x4a3c22,
+      emissive: new Color(0xffdf94),
+      emissiveIntensity: 0,
+      roughness: 0.4,
+    });
+    registerEmissive(bulbMaterial, 3.0);
+    const bulbs = new InstancedMesh(new SphereGeometry(0.09, 6, 5), bulbMaterial, bulbSlots.length);
+    const m = new Matrix4();
+    bulbSlots.forEach((p, i) => {
+      m.makeTranslation(p.x, p.y, p.z);
+      bulbs.setMatrixAt(i, m);
+    });
+    bulbs.instanceMatrix.needsUpdate = true;
+    scene.add(bulbs);
+  }
 }
 
-/** Extrude footprint; material group 0 = walls (sides), 1 = roof (caps). */
-function buildExtrusion(b: BakedBuilding, height: number): ExtrudeGeometry {
-  // Shape lives in XY with y = -z (see shapeUtil); extrude along shape-z
-  // then rotate flat so extrusion depth becomes world +Y.
+/**
+ * Extrude a footprint and split it into wall (sides) and roof (caps)
+ * geometries so each can be merged into its color bucket.
+ * ExtrudeGeometry group 0 = caps, group 1 = sides.
+ */
+function buildSplitExtrusion(
+  b: BakedBuilding,
+  height: number,
+): { walls: BufferGeometry; roof: BufferGeometry } {
   const geometry = new ExtrudeGeometry(polygonToShape(b.outer, b.inner), {
     depth: height,
     bevelEnabled: false,
   });
   geometry.rotateX(-Math.PI / 2);
-  // ExtrudeGeometry group 0 = caps, group 1 = sides; swap to walls-first order.
-  const groups = geometry.groups;
-  if (groups.length >= 2) {
-    const caps = groups[0];
-    const sides = groups[1];
-    if (caps && sides) {
-      caps.materialIndex = 1;
-      sides.materialIndex = 0;
+  const caps = geometry.groups[0];
+  const sides = geometry.groups[1];
+  const roof = sliceGeometry(geometry, caps?.start ?? 0, caps?.count ?? 0);
+  const walls = sliceGeometry(geometry, sides?.start ?? 0, sides?.count ?? Infinity);
+  geometry.dispose();
+  return { walls, roof };
+}
+
+/** Copy a vertex range of a non-indexed geometry into a new geometry. */
+function sliceGeometry(source: ExtrudeGeometry, start: number, count: number): BufferGeometry {
+  const out = new BufferGeometry();
+  for (const name of ["position", "normal", "uv"] as const) {
+    const attr = source.getAttribute(name);
+    if (!attr) continue;
+    const itemSize = attr.itemSize;
+    const end = Math.min(attr.count, start + count);
+    const slice = new Float32Array(Math.max(0, end - start) * itemSize);
+    for (let i = start; i < end; i++) {
+      for (let c = 0; c < itemSize; c++) {
+        slice[(i - start) * itemSize + c] = attr.getComponent(i, c);
+      }
     }
+    out.setAttribute(name, new BufferAttribute(slice, itemSize));
   }
-  return geometry;
+  return out;
 }
 
 /** Windows along each sufficiently long facade edge, facing outward. */
@@ -182,6 +238,34 @@ function collectWindowSlots(
           yawY: yaw,
         });
       }
+    }
+  }
+}
+
+/** String-light bulbs along the top edge of every facade, every ~1.3 m. */
+function collectBulbSlots(b: BakedBuilding, height: number, out: Vector3[]): void {
+  if (height < 3) return;
+  const pts = b.outer;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const c = pts[(i + 1) % pts.length];
+    if (!a || !c) continue;
+    const dx = c[0] - a[0];
+    const dz = c[1] - a[1];
+    const len = Math.hypot(dx, dz);
+    if (len < 2.5) continue;
+    let nx = dz / len;
+    let nz = -dx / len;
+    if (pointInPolygon((a[0] + c[0]) / 2 + nx * 0.4, (a[1] + c[1]) / 2 + nz * 0.4, pts)) {
+      nx = -nx;
+      nz = -nz;
+    }
+    const count = Math.floor(len / 1.3);
+    for (let k = 0; k <= count; k++) {
+      const t = count === 0 ? 0.5 : k / count;
+      out.push(
+        new Vector3(a[0] + dx * t + nx * 0.18, height + 0.12, a[1] + dz * t + nz * 0.18),
+      );
     }
   }
 }
