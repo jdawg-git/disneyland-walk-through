@@ -1,27 +1,69 @@
 import type { Scene } from "three";
-import { LANDS, landAt } from "../config/lands";
-import { LANDMARKS } from "../config/landmarks";
-import type { Pt } from "../data/parkLayout";
+import { mulberry32, type Rng } from "../engine/random";
+import { landAt, type LandId } from "../config/lands";
+import { LANDMARKS, type LandmarkKey } from "../config/landmarks";
+import { PARK_LAYOUT, pointInPolygon, polygonCentroid, type Pt } from "../data/parkLayout";
 import { buildBuildings } from "./buildings";
+import { buildBigThunder } from "./landmarks/bigThunder";
 import { buildCastle } from "./landmarks/castle";
+import { buildHauntedMansion } from "./landmarks/hauntedMansion";
+import { buildMatterhorn } from "./landmarks/matterhorn";
+import { buildPiratesFacade } from "./landmarks/piratesFacade";
+import { buildSmallWorld } from "./landmarks/smallWorld";
+import { buildSpaceMountain } from "./landmarks/spaceMountain";
+import { buildTikiRoom } from "./landmarks/tikiRoom";
 import { buildTrainStation } from "./landmarks/trainStation";
 import { buildProps, type PropPlacements } from "./props";
 import { buildRailroad } from "./railroad";
 import { buildTerrain } from "./terrain";
 
+const LANDMARK_BUILDERS: Record<LandmarkKey, (scene: Scene, x: number, z: number) => void> = {
+  castle: buildCastle,
+  trainStation: buildTrainStation,
+  matterhorn: buildMatterhorn,
+  spaceMountain: buildSpaceMountain,
+  tikiRoom: buildTikiRoom,
+  piratesFacade: buildPiratesFacade,
+  hauntedMansion: buildHauntedMansion,
+  bigThunder: buildBigThunder,
+  smallWorld: buildSmallWorld,
+};
+
+/** Which tree species each land grows. */
+const TREE_SPECIES: Partial<Record<LandId, "round" | "palm" | "pine">> = {
+  mainStreet: "round",
+  hub: "round",
+  adventureland: "palm",
+  neworleans: "round",
+  frontierland: "pine",
+  critterCountry: "pine",
+  fantasyland: "round",
+  toontown: "round",
+  tomorrowland: "round",
+};
+
+/** Lands that get lamp posts along their walkways. */
+const LAMP_LANDS: ReadonlySet<LandId> = new Set([
+  "mainStreet",
+  "hub",
+  "neworleans",
+  "fantasyland",
+  "tomorrowland",
+  "toontown",
+  "adventureland",
+  "frontierland",
+  "critterCountry",
+]);
+
 /**
- * Orchestrates park construction from the baked OSM layout. Stage 2 scope:
- * terrain everywhere, but buildings/props only inside the authored land
- * polygons (Main Street + hub). Each later stage widens the include test as
- * new land polygons are authored.
+ * Orchestrates park construction from the baked OSM layout: terrain, berm,
+ * generic buildings (per-land palettes), bespoke landmarks, and props
+ * scattered from the real greens/walkway data.
  */
 export function buildPark(scene: Scene, seed: number): void {
   buildTerrain(scene);
   buildRailroad(scene);
 
-  // Full-park blockout: every footprint inside the boundary is extruded.
-  // Buildings inside an authored land get its palette; backstage mass gets
-  // neutral grey via the fallback palette in buildings.ts.
   const skipIds = new Set<number>(LANDMARKS.flatMap((l) => [...l.osmIds]));
   buildBuildings(scene, {
     skipIds,
@@ -30,62 +72,95 @@ export function buildPark(scene: Scene, seed: number): void {
 
   for (const landmark of LANDMARKS) {
     const [x, z] = landmark.position;
-    if (landmark.key === "castle") buildCastle(scene, x, z);
-    else if (landmark.key === "trainStation") buildTrainStation(scene, x, z);
+    LANDMARK_BUILDERS[landmark.key](scene, x, z);
   }
 
-  buildProps(scene, slicePropPlacements(), seed);
+  buildProps(scene, generatePropPlacements(seed), seed);
 }
 
-/**
- * Hand-placed slice props: lamp rows flanking Main Street and around the
- * hub, trees in Town Square + hub planters. Later stages generate these
- * from land configs instead.
- */
-function slicePropPlacements(): PropPlacements {
+/** Scatter trees on real planter polygons; march lamps along real paths. */
+function generatePropPlacements(seed: number): PropPlacements {
+  const rng = mulberry32(seed + 7);
+  const round: Pt[] = [];
+  const palm: Pt[] = [];
+  const pine: Pt[] = [];
   const lamps: Pt[] = [];
-  const trees: Pt[] = [];
 
-  // Main Street runs x≈2.6→5.8, z from the station (300) to the hub (105).
+  // --- Trees on greens ---
+  for (const green of PARK_LAYOUT.greens) {
+    const center = polygonCentroid(green.outer);
+    const land = landAt(center[0], center[1]);
+    if (!land) continue;
+    const species = TREE_SPECIES[land.id] ?? "round";
+    const area = Math.abs(shoelace(green.outer));
+    const count = Math.min(10, Math.max(1, Math.floor(area / 60)));
+    const bucket = species === "palm" ? palm : species === "pine" ? pine : round;
+    for (const p of samplePolygon(green.outer, count, rng)) bucket.push(p);
+  }
+
+  // --- Lamps along walkways (every ~24 m, capped) ---
+  const LAMP_CAP = 360;
+  for (const path of PARK_LAYOUT.paths) {
+    if (lamps.length >= LAMP_CAP) break;
+    if (path.kind !== "footway" && path.kind !== "pedestrian") continue;
+    let sinceLast = 12; // place the first lamp quickly
+    for (let i = 0; i < path.points.length - 1 && lamps.length < LAMP_CAP; i++) {
+      const a = path.points[i];
+      const b = path.points[i + 1];
+      if (!a || !b) continue;
+      const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      let d = 24 - sinceLast;
+      while (d < segLen) {
+        const t = d / segLen;
+        const x = a[0] + (b[0] - a[0]) * t;
+        const z = a[1] + (b[1] - a[1]) * t;
+        const land = landAt(x, z);
+        if (land && LAMP_LANDS.has(land.id) && rng() > 0.35) lamps.push([x, z]);
+        d += 24;
+        if (lamps.length >= LAMP_CAP) break;
+      }
+      sinceLast = (sinceLast + segLen) % 24;
+    }
+  }
+
+  // Hand-placed Main Street double row — the signature promenade.
   for (let z = 130; z <= 260; z += 18) {
     lamps.push([-7.5, z], [14.5, z]);
   }
-  // Town Square ring (z ≈ 265–330).
-  for (const p of [
-    [-24, 275],
-    [28, 275],
-    [-24, 315],
-    [28, 315],
-    [2, 330],
-  ] as const) {
-    lamps.push(p);
-  }
-  // Hub ring around the plaza center (0, 55).
-  const hubCenter = { x: 1, z: 55 };
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    lamps.push([hubCenter.x + Math.cos(a) * 34, hubCenter.z + Math.sin(a) * 34]);
-  }
 
-  // Trees: Town Square lawn + hub planters.
-  for (const p of [
-    [-30, 285],
-    [-30, 305],
-    [34, 285],
-    [34, 305],
-    [-16, 322],
-    [20, 322],
-  ] as const) {
-    trees.push(p);
-  }
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2 + 0.26;
-    trees.push([hubCenter.x + Math.cos(a) * 42, hubCenter.z + Math.sin(a) * 42]);
-  }
+  return { lamps, round, palm, pine };
+}
 
-  const inAuthoredLand = (p: Pt): boolean => LANDS.some((l) => landAt(p[0], p[1])?.id === l.id);
-  return {
-    lamps: lamps.filter(inAuthoredLand),
-    trees: trees.filter(inAuthoredLand),
-  };
+function shoelace(poly: readonly Pt[]): number {
+  let sum = 0;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[j];
+    const b = poly[i];
+    if (!a || !b) continue;
+    sum += (a[0] * b[1] - b[0] * a[1]) / 2;
+  }
+  return sum;
+}
+
+/** Rejection-sample `count` interior points of a polygon. */
+function samplePolygon(poly: readonly Pt[], count: number, rng: Rng): Pt[] {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const p of poly) {
+    minX = Math.min(minX, p[0]);
+    maxX = Math.max(maxX, p[0]);
+    minZ = Math.min(minZ, p[1]);
+    maxZ = Math.max(maxZ, p[1]);
+  }
+  const out: Pt[] = [];
+  let attempts = 0;
+  while (out.length < count && attempts < count * 30) {
+    attempts += 1;
+    const x = minX + rng() * (maxX - minX);
+    const z = minZ + rng() * (maxZ - minZ);
+    if (pointInPolygon(x, z, poly)) out.push([x, z]);
+  }
+  return out;
 }

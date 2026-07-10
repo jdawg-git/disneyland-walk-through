@@ -5,8 +5,19 @@
  * to search the data at runtime.
  */
 
+export type LandmarkKey =
+  | "castle"
+  | "trainStation"
+  | "matterhorn"
+  | "spaceMountain"
+  | "tikiRoom"
+  | "piratesFacade"
+  | "hauntedMansion"
+  | "bigThunder"
+  | "smallWorld";
+
 export interface LandmarkDef {
-  readonly key: string;
+  readonly key: LandmarkKey;
   /** OSM way/relation ids replaced by this bespoke mesh. */
   readonly osmIds: readonly number[];
   readonly position: readonly [number, number];
@@ -15,4 +26,11 @@ export interface LandmarkDef {
 export const LANDMARKS: readonly LandmarkDef[] = [
   { key: "castle", osmIds: [331440228], position: [5.8, -12.2] },
   { key: "trainStation", osmIds: [153044358], position: [2.6, 300.2] },
+  { key: "matterhorn", osmIds: [107280556], position: [109, -38.8] },
+  { key: "spaceMountain", osmIds: [372931495], position: [151, 162] },
+  { key: "tikiRoom", osmIds: [653252856], position: [-53.2, 114.3] },
+  { key: "piratesFacade", osmIds: [824031784], position: [-200.2, 190.5] },
+  { key: "hauntedMansion", osmIds: [178254960], position: [-301.8, 120.2] },
+  { key: "bigThunder", osmIds: [266074156], position: [-124.2, 3.8] },
+  { key: "smallWorld", osmIds: [499783300], position: [114.3, -247.7] },
 ];

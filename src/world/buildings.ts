@@ -96,11 +96,11 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
 
   if (windowSlots.length > 0) {
     const glassMaterial = new MeshStandardMaterial({
-      color: 0x5a6a78, // daytime: pale reflective glass, not black holes
+      color: 0x9fb2c0, // daytime: pale sky-reflecting glass, not black holes
       emissive: new Color(0xffc266),
       emissiveIntensity: 0,
-      roughness: 0.25,
-      metalness: 0.25,
+      roughness: 0.12,
+      metalness: 0.55,
     });
     registerEmissive(glassMaterial, 2.4);
     const windows = new InstancedMesh(new PlaneGeometry(0.95, 1.25), glassMaterial, windowSlots.length);
