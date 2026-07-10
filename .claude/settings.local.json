@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s --max-time 45 \"https://overpass-api.de/api/interpreter\" --data-urlencode 'data=[out:json][timeout:30];area[\"name\"=\"Disneyland Park\"][\"leisure\"~\".\"][\"operator\"~\"Disney\",i]\\(33.80,-117.93,33.82,-117.91\\)->.park;\\(way[\"building\"]\\(area.park\\);way[\"highway\"~\"footway|path|pedestrian\"]\\(area.park\\);way[\"railway\"]\\(area.park\\);way[\"natural\"=\"water\"]\\(area.park\\);\\);out count;')"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "viewpoints": [
+    { "name": "street-toward-castle", "cam": "0,1.7,20,0,2" },
+    { "name": "street-elevated", "cam": "-30,12,-40,-37,-10" },
+    { "name": "overview", "cam": "0,60,60,0,-27" }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "disneyland-virtual",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "fetch:osm": "tsx scripts/fetch-osm.ts",
+    "gen:audio": "node scripts/gen-silent-audio.mjs",
+    "verify": "node scripts/screenshot.mjs"
+  },
+  "dependencies": {
+    "n8ao": "^1.10.3",
+    "postprocessing": "^6.39.2",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/three": "^0.185.1",
+    "playwright": "^1.61.1",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
+  }
+}
