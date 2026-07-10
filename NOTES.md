@@ -58,3 +58,23 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - 2026-07-10: Plain DOM/CSS HUD, no UI framework.
 - 2026-07-10: mulberry32 seeded PRNG everywhere randomness is needed
   (`src/engine/random.ts`) so screenshots are reproducible.
+
+## Stage 2 — vertical slice notes
+
+- OSM bake: Overpass rejects requests without a descriptive User-Agent (406);
+  the fetch script sends one and rotates 3 mirrors with backoff. The park
+  boundary is relation 5586855 ("Disneyland", `tourism=theme_park` — NOT
+  `leisure=`). Bbox spill from DCA/Downtown Disney is filtered by
+  point-in-boundary.
+- Ground is pavement-first (boundary polygon), with greens/water carving in —
+  Disneyland is mostly paved, so this reads better than drawing path ribbons.
+- Collision = 0.5 m walkable bitmap baked at startup (~100 ms), obstacles
+  dilated one cell; movement slides via X-only/Z-only fallback.
+- Landmark meshes: castle walls get a faint self-emissive "floodlight" tint at
+  night (registerEmissive ~0.3) so the anchor never goes black — still zero
+  point lights.
+- Three.js gotcha: mesh transforms compose T·R·S, so scaling a rotated cone
+  skews it. Bake the rotation into geometry (geo.rotateY) before mesh.scale —
+  see hipRoofGeometry in trainStation.ts.
+- Guide is a stub (missing-key message + preview reply); real Gemini call is
+  stage 7. Audio zones work but placeholders are silent by design.

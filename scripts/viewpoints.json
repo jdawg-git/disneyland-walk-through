@@ -1,7 +1,10 @@
 {
   "viewpoints": [
-    { "name": "street-toward-castle", "cam": "0,1.7,20,0,2" },
-    { "name": "street-elevated", "cam": "-30,12,-40,-37,-10" },
-    { "name": "overview", "cam": "0,60,60,0,-27" }
+    { "name": "townsquare", "cam": "2,1.7,295,0,2" },
+    { "name": "mainstreet-mid", "cam": "2,1.7,190,0,2" },
+    { "name": "hub-castle", "cam": "1,1.7,80,0,3" },
+    { "name": "castle-close", "cam": "3,1.7,32,0,6" },
+    { "name": "station-from-square", "cam": "2,1.7,265,180,4" },
+    { "name": "overview", "cam": "0,150,420,0,-27" }
   ]
 }
