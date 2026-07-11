@@ -29,7 +29,7 @@ describe("scavenger star placement", () => {
   });
 
   it("every star is REACHABLE on foot from spawn (bridges + castle corridor connect)", () => {
-    const reachable = grid.reachableFrom(2, 285); // Town Square spawn
+    const reachable = grid.reachableFrom(2, 338); // entrance esplanade spawn
     for (const star of STARS) {
       const [x, , z] = star.position;
       expect(
@@ -51,7 +51,7 @@ describe("scavenger star placement", () => {
   });
 
   it("most of the walkway network is reachable from spawn (no stuck pockets)", () => {
-    const reachable = grid.reachableFrom(2, 285);
+    const reachable = grid.reachableFrom(2, 338);
     let total = 0;
     let ok = 0;
     for (const path of PARK_LAYOUT.paths) {

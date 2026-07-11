@@ -1,4 +1,10 @@
-import { AMBIENT_LOOP, AUDIO_ZONES, CROSSFADE_SECONDS, type AudioZoneId } from "../config/audio";
+import {
+  AMBIENT_LOOP,
+  AUDIO_ZONES,
+  CROSSFADE_IN_SECONDS,
+  CROSSFADE_OUT_SECONDS,
+  type AudioZoneId,
+} from "../config/audio";
 
 interface ZoneChannel {
   gain: GainNode;
@@ -94,9 +100,10 @@ export class AudioZoneSystem {
     if (this.active) {
       const from = this.channels.get(this.active);
       if (from) {
+        // Long tail: the old land lingers under the new one.
         from.gain.gain.cancelScheduledValues(now);
         from.gain.gain.setValueAtTime(from.gain.gain.value, now);
-        from.gain.gain.linearRampToValueAtTime(0, now + CROSSFADE_SECONDS);
+        from.gain.gain.linearRampToValueAtTime(0, now + CROSSFADE_OUT_SECONDS);
       }
     }
     this.active = zone;
@@ -153,6 +160,6 @@ export class AudioZoneSystem {
     const now = this.ctx.currentTime;
     channel.gain.gain.cancelScheduledValues(now);
     channel.gain.gain.setValueAtTime(channel.gain.gain.value, now);
-    channel.gain.gain.linearRampToValueAtTime(1, now + CROSSFADE_SECONDS);
+    channel.gain.gain.linearRampToValueAtTime(1, now + CROSSFADE_IN_SECONDS);
   }
 }

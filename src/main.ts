@@ -73,8 +73,9 @@ function boot(p: AppParams): void {
   // Applied after scene build so registered emissive materials pick it up.
   if (p.time) dayNight.setTime(p.time, true);
 
-  // Spawn: Town Square, looking up Main Street toward the castle.
-  const SPAWN = { x: 2, z: 285 };
+  // Spawn: the entrance esplanade, outside the gate, facing the station —
+  // you arrive at the park the way real guests do.
+  const SPAWN = { x: 2, z: 338 };
 
   let controlsUpdate: (dt: number) => void = () => {};
   if (p.cam) {

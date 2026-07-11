@@ -17,8 +17,13 @@ export const AUDIO_ZONES = {
 
 export type AudioZoneId = keyof typeof AUDIO_ZONES;
 
-/** Seconds to crossfade between land tracks. */
-export const CROSSFADE_SECONDS = 1.5;
+/**
+ * Land-music crossfade. The incoming track rises over FADE_IN while the
+ * outgoing one lingers for FADE_OUT — the long overlap makes transitions
+ * feel like drifting between areas rather than a track swap.
+ */
+export const CROSSFADE_IN_SECONDS = 4;
+export const CROSSFADE_OUT_SECONDS = 8;
 
 /**
  * Always-on ambient bed that loops everywhere, under the land music.
