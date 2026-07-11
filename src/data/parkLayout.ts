@@ -44,6 +44,17 @@ export interface BakedGreen {
   readonly outer: readonly Pt[];
 }
 
+export interface BakedPlaza {
+  readonly id: number;
+  readonly kind: string;
+  readonly outer: readonly Pt[];
+}
+
+export interface BakedAmenity {
+  readonly kind: string;
+  readonly at: Pt;
+}
+
 export interface ParkLayout {
   readonly origin: { readonly lat: number; readonly lon: number };
   readonly boundary: readonly Pt[];
@@ -53,6 +64,8 @@ export interface ParkLayout {
   readonly railroad: readonly BakedRail[];
   readonly attractions: readonly BakedAttraction[];
   readonly greens: readonly BakedGreen[];
+  readonly plazas: readonly BakedPlaza[];
+  readonly amenities: readonly BakedAmenity[];
 }
 
 /** A ring is closed when its endpoints (nearly) meet — fillable as area. */

@@ -104,11 +104,13 @@ export class WalkableGrid {
     }
     for (const w of PARK_LAYOUT.water) this.fillPolygon(w.outer, 0);
     this.dilateBlocked(PLAYER_RADIUS_CELLS);
-    // 3. Carve real walkways at full width — bridges + castle corridor.
+    // 3. Carve real walkways at full width — bridges + castle corridor —
+    //    and pedestrian AREA polygons (plazas/street surfaces).
     for (const path of PARK_LAYOUT.paths) {
       if (path.kind !== "footway" && path.kind !== "pedestrian" && path.kind !== "steps") continue;
       this.carvePolyline(path.points, PATH_HALF_WIDTH);
     }
+    for (const plaza of PARK_LAYOUT.plazas) this.fillPolygon(plaza.outer, 1);
     // 4. Generic buildings win over ribbons.
     for (const b of PARK_LAYOUT.buildings) {
       if (LANDMARK_FOOTPRINT_IDS.has(b.id)) continue;

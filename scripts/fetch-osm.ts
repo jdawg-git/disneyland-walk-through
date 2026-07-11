@@ -36,6 +36,8 @@ const QUERY = `
   relation["building"];
   relation["natural"="water"];
   relation["attraction"];
+  node["amenity"~"^(bench|waste_basket|fountain|drinking_water)$"];
+  node["attraction"];
 );
 out geom;
 relation(5586855);  // "Disneyland" tourism=theme_park boundary relation
@@ -67,7 +69,15 @@ interface OverpassRelation {
   readonly members?: readonly OverpassRelationMember[];
 }
 
-type OverpassElement = OverpassWay | OverpassRelation;
+interface OverpassNode {
+  readonly type: "node";
+  readonly id: number;
+  readonly lat: number;
+  readonly lon: number;
+  readonly tags?: Record<string, string>;
+}
+
+type OverpassElement = OverpassWay | OverpassRelation | OverpassNode;
 
 interface OverpassResponse {
   readonly elements: readonly OverpassElement[];
@@ -116,6 +126,17 @@ interface BakedGreen {
   readonly outer: readonly Pt[];
 }
 
+interface BakedPlaza {
+  readonly id: number;
+  readonly kind: string;
+  readonly outer: readonly Pt[];
+}
+
+interface BakedAmenity {
+  readonly kind: string;
+  readonly at: Pt;
+}
+
 interface ParkLayout {
   readonly origin: { readonly lat: number; readonly lon: number };
   readonly boundary: readonly Pt[];
@@ -125,6 +146,8 @@ interface ParkLayout {
   readonly railroad: readonly BakedRail[];
   readonly attractions: readonly BakedAttraction[];
   readonly greens: readonly BakedGreen[];
+  readonly plazas: readonly BakedPlaza[];
+  readonly amenities: readonly BakedAmenity[];
 }
 
 // ---------------------------------------------------------------------------
@@ -335,6 +358,8 @@ const water: BakedWater[] = [];
 const railroad: BakedRail[] = [];
 const attractions: BakedAttraction[] = [];
 const greens: BakedGreen[] = [];
+const plazas: BakedPlaza[] = [];
+const amenities: BakedAmenity[] = [];
 
 const pickName = (tags: Record<string, string> | undefined): string | undefined =>
   tags?.["name"];
@@ -363,6 +388,18 @@ for (const el of data.elements) {
         outer,
       });
     } else if (tags["highway"] !== undefined) {
+      const first = raw[0];
+      const last = raw[raw.length - 1];
+      const closed =
+        raw.length >= 4 && first && last && Math.hypot(first[0] - last[0], first[1] - last[1]) < 1.0;
+      if (tags["area"] === "yes" && closed) {
+        // Pedestrian AREA — a real plaza/street surface, not a walk line.
+        const outer = simplify(raw, 0.4);
+        if (outer.length >= 4) {
+          plazas.push({ id: el.id, kind: tags["highway"] ?? "pedestrian", outer });
+          continue;
+        }
+      }
       const pts = simplify(raw, 0.4);
       paths.push({ id: el.id, kind: tags["highway"] ?? "footway", points: pts });
     } else if (tags["natural"] === "water" || tags["waterway"] !== undefined) {
@@ -404,6 +441,15 @@ for (const el of data.elements) {
     ) {
       const outer = simplify(raw, 0.6);
       if (outer.length >= 4) greens.push({ id: el.id, outer });
+    }
+  } else if (el.type === "node") {
+    const at = project({ lat: el.lat, lon: el.lon });
+    if (!pointInPolygon(at, boundary)) continue;
+    if (tags["amenity"] !== undefined) {
+      amenities.push({ kind: tags["amenity"] ?? "bench", at });
+    } else if (tags["attraction"] !== undefined) {
+      const name = pickName(tags);
+      if (name !== undefined) attractions.push({ id: el.id, name, center: at });
     }
   } else if (el.type === "relation" && el.tags?.["tourism"] !== "theme_park") {
     // Multipolygon buildings / water.
@@ -451,6 +497,8 @@ const layout: ParkLayout = {
   railroad,
   attractions,
   greens,
+  plazas,
+  amenities,
 };
 
 const outFile = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "park-layout.json");
@@ -460,7 +508,8 @@ writeFileSync(outFile, JSON.stringify(layout));
 console.log(
   `Baked park-layout.json: ${buildings.length} buildings, ${paths.length} paths, ` +
     `${water.length} water, ${railroad.length} rail, ${attractions.length} attractions, ` +
-    `${greens.length} greens, boundary ${boundary.length} pts`,
+    `${greens.length} greens, ${plazas.length} plazas, ${amenities.length} amenities, ` +
+    `boundary ${boundary.length} pts`,
 );
 const named = buildings.filter((b) => b.name !== undefined).map((b) => b.name);
 console.log(`Named buildings (${named.length}): ${named.slice(0, 40).join(" | ")}`);

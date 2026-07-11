@@ -16,6 +16,49 @@ function makeCanvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D]
   return [canvas, ctx];
 }
 
+let rippleCache: CanvasTexture | null = null;
+
+/** Subtle water ripple sheen: soft light streaks on transparent-ish blue. */
+export function rippleTexture(): CanvasTexture {
+  if (rippleCache) return rippleCache;
+  const [canvas, ctx] = makeCanvas(256);
+  // Near-white base so it multiplies gently over the water color.
+  ctx.fillStyle = "#e8ecf0";
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.lineWidth = 2;
+  let rand = 12345;
+  const rng = (): number => {
+    rand = (rand * 1103515245 + 12345) & 0x7fffffff;
+    return rand / 0x7fffffff;
+  };
+  for (let i = 0; i < 40; i++) {
+    const y = rng() * 256;
+    const x = rng() * 256;
+    const len = 18 + rng() * 46;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + len / 2, y + (rng() - 0.5) * 7, x + len, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(140,170,200,0.4)";
+  for (let i = 0; i < 30; i++) {
+    const y = rng() * 256;
+    const x = rng() * 256;
+    const len = 14 + rng() * 36;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + len / 2, y + (rng() - 0.5) * 6, x + len, y);
+    ctx.stroke();
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  rippleCache = texture;
+  return texture;
+}
+
 let stainedGlassCache: CanvasTexture | null = null;
 
 /** Rose-window stained glass: leaded segments in jewel tones on a dark field. */

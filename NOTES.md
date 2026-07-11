@@ -230,3 +230,21 @@ Running log of how this project is built and why. Newest decisions at the bottom
   "undefined reading x" deep in CatmullRomCurve3. Fixed: loop clamps dt to
   [0, MAX_DT]; vehicles use safe modulo; updatables are isolated (a
   throwing hook is disabled + reported, never kills the render loop).
+
+## v2 Pass 4 — map truth
+
+- Re-bake adds `plazas` (215 closed highway=pedestrian/area=yes rings — the
+  REAL street/plaza surfaces) and `amenities` (175 bench/waste/fountain
+  nodes for future prop placement). Plazas are carved as walkable polygons
+  AND rendered as slightly-lightened land-tinted surfaces.
+- Per-land ground tint (lands.ts `ground`): Main Street's red concrete,
+  Tomorrowland cool grey, etc. Base land tint at y0.015, plazas y0.03,
+  greens y0.045, water y0.08.
+- Building height sanity: area-based level guessing (<25 m² kiosk ≈ 3 m,
+  <75 m² shop ≈ 4.6 m) when OSM has no levels/height — no more 3-story
+  popcorn carts.
+- Water: scrolling canvas ripple sheen (map offset via updatable).
+- Reachability test reframed: walk lines ≥75% + plaza centroids ≥85% (the
+  plazas absorbed the well-connected guest surfaces from the paths bucket).
+- Tomorrowland polygon extended east to the Autopia area; 10/10 zone label
+  spot checks pass.

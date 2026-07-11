@@ -77,8 +77,7 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
     };
 
     const rng = mulberry32(b.id);
-    const height =
-      b.height ?? (b.levels ?? DEFAULT_LEVELS + (rng() > 0.65 ? 1 : 0)) * LEVEL_HEIGHT;
+    const height = b.height ?? (b.levels ?? guessLevels(b, rng)) * LEVEL_HEIGHT;
 
     const wallColor = palette.walls[Math.floor(rng() * palette.walls.length)] ?? 0xb0a898;
     const roofColor = palette.roofs[Math.floor(rng() * palette.roofs.length)] ?? 0x6a625a;
@@ -153,6 +152,26 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
     bulbs.instanceMatrix.needsUpdate = true;
     scene.add(bulbs);
   }
+}
+
+/**
+ * Height sanity when OSM gives no levels/height: tiny footprints are carts
+ * and kiosks (one low story), small ones are single-story shops; only real
+ * buildings get the 2-3 story treatment. Kills the "3-story popcorn stand".
+ */
+function guessLevels(b: BakedBuilding, rng: () => number): number {
+  let area = 0;
+  const pts = b.outer;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[j];
+    const c = pts[i];
+    if (!a || !c) continue;
+    area += (a[0] * c[1] - c[0] * a[1]) / 2;
+  }
+  area = Math.abs(area);
+  if (area < 25) return 0.9; // kiosk/cart: ~3 m
+  if (area < 75) return 1.35; // small shop: ~4.6 m
+  return DEFAULT_LEVELS + (rng() > 0.65 ? 1 : 0);
 }
 
 /**

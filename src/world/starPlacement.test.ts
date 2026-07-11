@@ -52,6 +52,9 @@ describe("scavenger star placement", () => {
 
   it("most of the walkway network is reachable from spawn (no stuck pockets)", () => {
     const reachable = grid.reachableFrom(2, 338);
+
+    // Walk lines (footways) — the residue skews backstage since real guest
+    // surfaces moved to the plazas bucket in the Pass-4 re-bake.
     let total = 0;
     let ok = 0;
     for (const path of PARK_LAYOUT.paths) {
@@ -62,7 +65,24 @@ describe("scavenger star placement", () => {
         if (reachable(p[0], p[1])) ok += 1;
       }
     }
-    // 84% at time of writing; guards against collision regressions.
-    expect(ok / total).toBeGreaterThan(0.8);
+    expect(ok / total).toBeGreaterThan(0.75);
+
+    // Plaza surfaces — the real guest areas; these must stay well connected.
+    let plazaTotal = 0;
+    let plazaOk = 0;
+    for (const plaza of PARK_LAYOUT.plazas) {
+      let cx = 0;
+      let cz = 0;
+      for (const p of plaza.outer) {
+        cx += p[0];
+        cz += p[1];
+      }
+      cx /= plaza.outer.length;
+      cz /= plaza.outer.length;
+      if (!landAt(cx, cz)) continue;
+      plazaTotal += 1;
+      if (reachable(cx, cz)) plazaOk += 1;
+    }
+    expect(plazaOk / plazaTotal).toBeGreaterThan(0.85);
   });
 });

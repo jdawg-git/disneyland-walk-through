@@ -45,11 +45,14 @@ export interface LandDef {
   readonly polygon: readonly Pt[];
   readonly audioZone: AudioZoneId;
   readonly palette: LandPalette;
+  /** Base ground tint; plazas render slightly lighter on top. */
+  readonly ground: number;
 }
 
 export const LANDS: readonly LandDef[] = [
   {
     id: "mainStreet",
+    ground: 0x9c5a50,
     name: "Main Street, U.S.A.",
     audioZone: "mainStreet",
     palette: {
@@ -67,6 +70,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "adventureland",
+    ground: 0xa08a62,
     name: "Adventureland",
     audioZone: "adventureland",
     palette: {
@@ -85,6 +89,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "neworleans",
+    ground: 0x8f8578,
     name: "New Orleans Square",
     audioZone: "neworleans",
     palette: {
@@ -102,6 +107,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "critterCountry",
+    ground: 0x97825c,
     name: "Critter Country",
     audioZone: "critterCountry",
     palette: {
@@ -119,6 +125,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "frontierland",
+    ground: 0xb08d5e,
     name: "Frontierland",
     audioZone: "frontierland",
     palette: {
@@ -138,6 +145,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "fantasyland",
+    ground: 0xa89ba8,
     name: "Fantasyland",
     audioZone: "fantasyland",
     palette: {
@@ -159,6 +167,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "toontown",
+    ground: 0xc7a878,
     name: "Mickey's Toontown",
     audioZone: "toontown",
     palette: {
@@ -176,6 +185,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "tomorrowland",
+    ground: 0x9aa4ac,
     name: "Tomorrowland",
     audioZone: "tomorrowland",
     palette: {
@@ -187,8 +197,8 @@ export const LANDS: readonly LandDef[] = [
     polygon: [
       [60, 100],
       [105, 215],
-      [230, 215],
-      [230, -190],
+      [262, 215],
+      [262, -190],
       [148, -190],
       [148, -25],
       [60, -25],
@@ -197,6 +207,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "hub",
+    ground: 0xb9a88f,
     name: "Central Plaza",
     audioZone: "hub",
     palette: {

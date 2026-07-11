@@ -11,7 +11,10 @@ import {
   Vector3,
 } from "three";
 import { registerEmissive } from "../engine/emissive";
-import { PARK_LAYOUT, pointInPolygon } from "../data/parkLayout";
+import { registerUpdatable } from "../engine/updatables";
+import { LANDS, landAt } from "../config/lands";
+import { PARK_LAYOUT, pointInPolygon, polygonCentroid } from "../data/parkLayout";
+import { rippleTexture } from "./textures";
 import { flatPolygonGeometry } from "./shapeUtil";
 
 /**
@@ -37,22 +40,65 @@ export function buildTerrain(scene: Scene): void {
   pavement.receiveShadow = true;
   scene.add(pavement);
 
-  const grassMaterial = new MeshStandardMaterial({ color: 0x6f9c4e, roughness: 1 });
-  for (const g of PARK_LAYOUT.greens) {
-    const mesh = new Mesh(flatPolygonGeometry(g.outer), grassMaterial);
-    mesh.position.y = 0.04;
+  // Per-land ground tint (Main Street red concrete, Tomorrowland cool
+  // concrete, …) with the real OSM plaza surfaces rendered slightly
+  // lighter on top — the walkway layout finally reads as designed streets.
+  const plazaMaterials = new Map<string, MeshStandardMaterial>();
+  const white = new Color(0xffffff);
+  for (const land of LANDS) {
+    const groundMesh = new Mesh(
+      flatPolygonGeometry(land.polygon),
+      new MeshStandardMaterial({ color: land.ground, roughness: 0.98 }),
+    );
+    groundMesh.position.y = 0.015;
+    groundMesh.receiveShadow = true;
+    scene.add(groundMesh);
+
+    const plazaColor = new Color(land.ground).lerp(white, 0.16);
+    plazaMaterials.set(
+      land.id,
+      new MeshStandardMaterial({ color: plazaColor, roughness: 0.92 }),
+    );
+  }
+  const defaultPlazaMaterial = new MeshStandardMaterial({ color: 0xc4b8a4, roughness: 0.92 });
+  for (const plaza of PARK_LAYOUT.plazas) {
+    const c = polygonCentroid(plaza.outer);
+    const land = landAt(c[0], c[1]);
+    const mesh = new Mesh(
+      flatPolygonGeometry(plaza.outer),
+      (land && plazaMaterials.get(land.id)) ?? defaultPlazaMaterial,
+    );
+    mesh.position.y = 0.03;
     mesh.receiveShadow = true;
     scene.add(mesh);
   }
 
+  const grassMaterial = new MeshStandardMaterial({ color: 0x6f9c4e, roughness: 1 });
+  for (const g of PARK_LAYOUT.greens) {
+    const mesh = new Mesh(flatPolygonGeometry(g.outer), grassMaterial);
+    mesh.position.y = 0.045;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+  }
+
+  // Water with a slow scrolling ripple sheen.
   const waterMaterial = new MeshStandardMaterial({
     color: 0x3a6a9e,
     roughness: 0.25,
     metalness: 0.1,
+    map: rippleTexture(),
     emissive: new Color(0x16304e),
     emissiveIntensity: 0,
   });
   registerEmissive(waterMaterial, 0.5); // faint moonlit sheen at night
+  const ripple = waterMaterial.map;
+  if (ripple) {
+    ripple.repeat.set(0.045, 0.045);
+    registerUpdatable((dt) => {
+      ripple.offset.x += dt * 0.012;
+      ripple.offset.y += dt * 0.008;
+    });
+  }
   for (const w of PARK_LAYOUT.water) {
     const mesh = new Mesh(flatPolygonGeometry(w.outer, w.inner), waterMaterial);
     mesh.position.y = 0.08;
