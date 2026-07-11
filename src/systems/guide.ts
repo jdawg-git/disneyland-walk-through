@@ -7,7 +7,7 @@ export const GUIDE_MISSING_KEY_MESSAGE =
   "Add your Gemini key to a .env file (see .env.example) and restart the dev " +
   "server to bring me to life.";
 
-const MODEL = "gemini-2.0-flash";
+const MODEL = "gemini-2.5-flash";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 const PERSONA = `You are "Star", a warm, knowledgeable Disneyland tour guide inside a stylized
