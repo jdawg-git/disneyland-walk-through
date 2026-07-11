@@ -47,7 +47,7 @@ export function createHud(deps: HudDeps): void {
         <label>Audio</label>
         <span>
           <button id="hud-mute">Mute</button>
-          <input type="range" id="hud-volume" min="0" max="100" value="70" />
+          <input type="range" id="hud-volume" min="0" max="100" value="25" />
         </span>
       </div>
     </div>
