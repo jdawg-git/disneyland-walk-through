@@ -134,10 +134,17 @@ function buildBridgeDecks(scene: Scene): void {
     readonly mid: Vector3;
     readonly yaw: number;
     readonly length: number;
+    /** Cross-bridge width multiplier (geometry is 3.4 m wide at 1). */
+    readonly width?: number;
   }
   const decks: Deck[] = [];
   const overWater = (x: number, z: number): boolean =>
     PARK_LAYOUT.water.some((w) => pointInPolygon(x, z, w.outer));
+
+  // The castle drawbridge is hand-placed below, aligned with the castle's
+  // walk-through corridor (world x 3.2..8.4, center 5.8) — the OSM moat
+  // crossing sits a few meters west of the arch and looked misaligned.
+  const CASTLE_BRIDGE = { x: 5.8, z: 4 };
 
   for (const path of PARK_LAYOUT.paths) {
     if (path.kind !== "footway" && path.kind !== "pedestrian" && path.kind !== "steps") continue;
@@ -148,6 +155,7 @@ function buildBridgeDecks(scene: Scene): void {
       const midX = (a[0] + b[0]) / 2;
       const midZ = (a[1] + b[1]) / 2;
       if (!overWater(midX, midZ) && !overWater(a[0], a[1]) && !overWater(b[0], b[1])) continue;
+      if (Math.hypot(midX - CASTLE_BRIDGE.x, midZ - CASTLE_BRIDGE.z) < 12) continue;
       const dx = b[0] - a[0];
       const dz = b[1] - a[1];
       const length = Math.hypot(dx, dz);
@@ -159,6 +167,14 @@ function buildBridgeDecks(scene: Scene): void {
       });
     }
   }
+  // Drawbridge: north-south deck dead-center on the corridor, spanning the
+  // moat in front of the gate (castle south face ≈ z −1; moat to z ≈ 9).
+  decks.push({
+    mid: new Vector3(CASTLE_BRIDGE.x, 0.14, CASTLE_BRIDGE.z),
+    yaw: Math.PI / 2, // unit-x box turned to run north-south
+    length: 14,
+    width: 1.6, // ≈5.4 m — matches the 5 m corridor
+  });
   if (decks.length === 0) return;
 
   const deckMaterial = new MeshStandardMaterial({ color: 0x8a6a48, roughness: 0.9 });
@@ -169,7 +185,7 @@ function buildBridgeDecks(scene: Scene): void {
   const scale = new Vector3();
   decks.forEach((d, i) => {
     q.setFromAxisAngle(up, d.yaw);
-    scale.set(d.length, 1, 1);
+    scale.set(d.length, 1, d.width ?? 1);
     m.compose(d.mid, q, scale);
     mesh.setMatrixAt(i, m);
   });

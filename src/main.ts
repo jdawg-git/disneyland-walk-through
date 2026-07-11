@@ -70,7 +70,7 @@ function boot(p: AppParams): void {
   // model still backs the ?date=YYYY-MM-DD&hour=H dev params (used by the
   // verify harness), but there is no in-game date picker.
   const AVERAGE_LEVEL = 6;
-  const crowd = new CrowdSystem(scene, p.seed);
+  const crowd = new CrowdSystem(scene, p.seed, (x, z) => walkable.isWalkable(x, z));
   const forecast = p.date
     ? crowdForecast(p.date)
     : { level: AVERAGE_LEVEL, label: `A typical day — Level ${AVERAGE_LEVEL}/10` };

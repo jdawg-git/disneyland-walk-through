@@ -16,9 +16,12 @@ import { registerEmissive } from "../../engine/emissive";
  * portico under a triangular pediment with a fan window, two-story verandas
  * wrapped in sage-green wrought-iron filigree, dark-green shutters, red
  * brick base, and a widow's-walk roof with weathervane. Cold green window
- * glow at night. Faces south (+Z, toward the river promenade).
+ * glow at night. The group is rotated +90° so the portico faces EAST
+ * (+x) toward the New Orleans riverfront promenade guests approach from —
+ * the railroad berm then passes BEHIND the mansion, as in the real park.
  *
- * Collider contract: box halfW 12 × halfD 9.5 at (−301.8, 120.2).
+ * Collider contract: box halfW 9.5 × halfD 12 at (−301.8, 120.2)
+ * (local depth becomes world x after the rotation).
  */
 export function buildHauntedMansion(scene: Scene, x: number, z: number): void {
   const g = new Group();
@@ -163,6 +166,7 @@ export function buildHauntedMansion(scene: Scene, x: number, z: number): void {
   steps.position.set(0, 0.45, 10.6);
   g.add(steps);
 
+  g.rotation.y = Math.PI / 2; // portico faces east, toward the promenade
   g.position.set(x, 0, z);
   scene.add(g);
 }

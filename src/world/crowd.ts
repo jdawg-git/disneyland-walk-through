@@ -55,12 +55,19 @@ export class CrowdSystem {
   private readonly npcs: Npc[] = [];
   private readonly waypoints: readonly Pt[];
   private readonly rng: Rng;
+  /** O(1) walkable-bitmap probe; null = unconstrained (tests). */
+  private readonly walkable: ((x: number, z: number) => boolean) | null;
   private active = 0;
   private time = 0;
 
-  constructor(scene: Scene, seed: number) {
+  constructor(scene: Scene, seed: number, walkable?: (x: number, z: number) => boolean) {
     this.rng = mulberry32(seed + 101);
-    this.waypoints = buildWaypoints();
+    this.walkable = walkable ?? null;
+    // Reject waypoints on blocked cells (buildings/water) so groups never
+    // AIM at somewhere illegal; keep the raw list if filtering would gut it.
+    const all = buildWaypoints();
+    const open = walkable ? all.filter((w) => walkable(w[0], w[1])) : all;
+    this.waypoints = open.length > 50 ? open : all;
 
     const bodyMaterial = new MeshStandardMaterial({ roughness: 0.9 });
     this.bodies = new InstancedMesh(new CapsuleGeometry(0.26, 0.85, 2, 7), bodyMaterial, MAX_NPCS);
@@ -157,8 +164,18 @@ export class CrowdSystem {
       if (dist < 1.2) {
         if (npc.leader < 0) this.retarget(npc);
       } else {
-        npc.x += (dx / dist) * npc.speed * dt;
-        npc.z += (dz / dist) * npc.speed * dt;
+        // NPCs obey the same walkable grid as the player: no wading the
+        // rivers, no ghosting through shop walls. Blocked leaders pick a
+        // new destination; blocked followers wait for the leader to move
+        // (their glue-to-leader targeting self-corrects).
+        const stepX = npc.x + (dx / dist) * npc.speed * dt;
+        const stepZ = npc.z + (dz / dist) * npc.speed * dt;
+        if (!this.walkable || this.walkable(stepX, stepZ)) {
+          npc.x = stepX;
+          npc.z = stepZ;
+        } else if (npc.leader < 0) {
+          this.retarget(npc);
+        }
       }
 
       const s = npc.scale;
@@ -215,8 +232,15 @@ export class CrowdSystem {
       if (!wp) continue;
       const d = Math.hypot(wp[0] - npc.x, wp[1] - npc.z);
       if (d > 4 && d < NEIGHBOR_RADIUS) {
-        npc.tx = wp[0] + (this.rng() - 0.5) * 5;
-        npc.tz = wp[1] + (this.rng() - 0.5) * 5;
+        const jx = wp[0] + (this.rng() - 0.5) * 5;
+        const jz = wp[1] + (this.rng() - 0.5) * 5;
+        if (this.walkable && !this.walkable(jx, jz)) {
+          npc.tx = wp[0];
+          npc.tz = wp[1];
+        } else {
+          npc.tx = jx;
+          npc.tz = jz;
+        }
         return;
       }
     }

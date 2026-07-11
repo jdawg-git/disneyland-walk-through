@@ -45,8 +45,8 @@ const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
   { kind: "box", x: 114.3, z: -247.7, halfW: 51, halfD: 4 },
   // Pirates facade + wings.
   { kind: "box", x: -200.2, z: 190.5, halfW: 26, halfD: 7.5 },
-  // Haunted Mansion.
-  { kind: "box", x: -301.8, z: 120.2, halfW: 12, halfD: 9.5 },
+  // Haunted Mansion (rotated 90° to face the promenade — dims swapped).
+  { kind: "box", x: -301.8, z: 120.2, halfW: 9.5, halfD: 12 },
   // Enchanted Tiki Room.
   { kind: "box", x: -53.2, z: 114.3, halfW: 15.5, halfD: 8.5 },
   // Tiana's Bayou Adventure buttes (keep in sync with landmarks/tianas.ts:

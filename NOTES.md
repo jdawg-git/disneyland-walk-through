@@ -327,3 +327,31 @@ Running log of how this project is built and why. Newest decisions at the bottom
   colorful; land palettes tuned pastel-forward because the grade pushes
   them (full-sat walls went neon — feed the grade pastels).
 - Perf: worst frame 774 calls / 723k tris (budget 1200) at the overview.
+
+## v4 — Stabilization (the five playtest defects)
+
+- MISSING FACADES root cause: the facade kit GUESSES each wall's outward
+  direction (point-in-polygon probe 0.4 m off the edge); wrong guesses on
+  concave OSM footprints made single-sided walls invisible from the
+  street, leaving windows/awnings "floating in the sky". Fix: walls,
+  glass/cornice buckets, windows, and signage are DoubleSide — a wrong
+  guess now costs nothing. The sloped mansard fascia (read as tilted
+  parallelogram walls) is deleted outright, styles field and all.
+- Lamps: deleted the auto-march along OSM path centerlines (haphazard
+  posts mid-plaza by construction). Hand-curated rows only: Main Street
+  double row, hub ring around Partners, Town Square corners, NOS
+  promenade, Fantasyland courtyard, Small World mall (~45 total).
+- Haunted Mansion rotated +90° to face EAST toward the promenade — the
+  rail berm now passes BEHIND it (as in Anaheim) instead of walling off
+  its front door. Collider dims swapped (halfW 9.5 × halfD 12).
+- Castle drawbridge: auto-decks are suppressed within 12 m of the
+  corridor mouth; one hand deck (14 m × ~5.4 m) sits dead-center on the
+  walk-through corridor at x = 5.8.
+- NPCs obey the walkable grid: CrowdSystem takes an isWalkable probe;
+  every movement step is checked (blocked leaders retarget, blocked
+  followers wait), waypoints are pre-filtered, jitter clamps to walkable.
+  No more wading the Rivers of America or ghosting through shops.
+- Trees no longer sprout inside bespoke landmarks (a green polygon under
+  the Mansion grew a canopy through its portico) — 15 m exclusion around
+  every LANDMARKS anchor.
+- 46 tests green; worst frame 764 calls / 634k tris (budget 1200).

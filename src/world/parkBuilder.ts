@@ -57,19 +57,6 @@ const TREE_SPECIES: Partial<Record<LandId, "round" | "palm" | "pine">> = {
   tomorrowland: "round",
 };
 
-/** Lands that get lamp posts along their walkways. */
-const LAMP_LANDS: ReadonlySet<LandId> = new Set([
-  "mainStreet",
-  "hub",
-  "neworleans",
-  "fantasyland",
-  "tomorrowland",
-  "toontown",
-  "adventureland",
-  "frontierland",
-  "critterCountry",
-]);
-
 /**
  * Orchestrates park construction from the baked OSM layout: terrain, berm,
  * generic buildings (per-land palettes), bespoke landmarks, and props
@@ -201,46 +188,37 @@ function generatePropPlacements(seed: number): PropPlacements {
       // Keep the hub's central planter clear: the Partners statue stands
       // there (streetFurniture.ts), and a canopy would swallow it.
       if (Math.hypot(p[0] - 1, p[1] - 55) < 8) continue;
+      // Never grow a tree inside a bespoke landmark (OSM gardens sit under
+      // some footprints — one sprouted through the Mansion's portico).
+      if (LANDMARKS.some((l) => Math.hypot(p[0] - l.position[0], p[1] - l.position[1]) < 15)) {
+        continue;
+      }
       bucket.push(p);
     }
   }
 
-  // --- Lamps along walkways (every ~24 m, capped) ---
-  const LAMP_CAP = 360;
-  for (const path of PARK_LAYOUT.paths) {
-    if (lamps.length >= LAMP_CAP) break;
-    if (path.kind !== "footway" && path.kind !== "pedestrian") continue;
-    let sinceLast = 12; // place the first lamp quickly
-    for (let i = 0; i < path.points.length - 1 && lamps.length < LAMP_CAP; i++) {
-      const a = path.points[i];
-      const b = path.points[i + 1];
-      if (!a || !b) continue;
-      const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      // Lamps stand at the walkway EDGE, not on the centerline — offset
-      // along the segment normal, alternating sides (footway ribbons are
-      // carved at half-width 2.0 m).
-      const nx = (b[1] - a[1]) / segLen;
-      const nz = -(b[0] - a[0]) / segLen;
-      let d = 24 - sinceLast;
-      while (d < segLen) {
-        const t = d / segLen;
-        const side = lamps.length % 2 === 0 ? 1.8 : -1.8;
-        const x = a[0] + (b[0] - a[0]) * t + nx * side;
-        const z = a[1] + (b[1] - a[1]) * t + nz * side;
-        const land = landAt(x, z);
-        if (land && LAMP_LANDS.has(land.id) && rng() > 0.35) lamps.push([x, z]);
-        d += 24;
-        if (lamps.length >= LAMP_CAP) break;
-      }
-      sinceLast = (sinceLast + segLen) % 24;
-    }
-  }
+  // --- Lamps: hand-curated rows ONLY. The old auto-march along OSM path
+  // centerlines scattered lamps mid-plaza (the centerlines wander across
+  // open squares), which read as haphazard posts in the walking path. ---
 
-  // Hand-placed Main Street double row — the signature promenade.
+  // Main Street double row — the signature promenade.
   // (Street corridor is only x ≈ −4..11; curbs sit at −3 and 10.)
   for (let z = 130; z <= 260; z += 18) {
     lamps.push([-3, z], [10, z]);
   }
+  // Hub ring around the Partners circle (statue at (1,55)).
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    lamps.push([1 + Math.cos(a) * 22, 55 + Math.sin(a) * 22]);
+  }
+  // Town Square corners (station forecourt at z≈290, flag circle at (2,~285)).
+  lamps.push([-16, 272], [20, 272], [-16, 296], [20, 296]);
+  // New Orleans riverfront promenade (along the walk toward the Mansion).
+  lamps.push([-215, 168], [-238, 158], [-262, 148], [-284, 140]);
+  // Fantasyland courtyard behind the castle (carrousel at (4,−76)).
+  lamps.push([-10, -62], [18, -62], [-10, -90], [18, -90]);
+  // Small World mall approach.
+  lamps.push([98, -226], [112, -226], [98, -240], [112, -240]);
 
   return { lamps, round, palm, pine };
 }

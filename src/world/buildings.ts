@@ -3,6 +3,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   Color,
+  DoubleSide,
   InstancedMesh,
   Matrix4,
   Mesh,
@@ -36,7 +37,6 @@ const DEFAULT_STYLE: LandStyle = {
   wall: "plaster",
   storefront: false,
   cornice: false,
-  mansard: false,
   awnings: [],
 };
 
@@ -114,7 +114,7 @@ interface SignAnchor {
  * The facade kit: every building wall is generated per footprint edge with
  * meter-scaled UVs over a tiling canvas texture (brick/clapboard/board/
  * panel/plaster per land style), plus storefront glass + awnings, cornice
- * strips, mansard fascia bands, instanced windows, Main Street roofline
+ * strips, instanced windows, Main Street roofline
  * bulbs, and a one-draw-call signage atlas naming the real shops.
  * Everything merges per (texture × color) bucket — a few dozen meshes for
  * the whole park.
@@ -212,6 +212,10 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
         color: Number(colorStr),
         map: wallTexture((kind ?? "plaster") as WallKind),
         roughness: 0.9,
+        // The edge walker GUESSES outward direction; on concave footprints
+        // a wrong guess made single-sided walls invisible from the street
+        // ("missing facades"). Double-sided costs nothing here.
+        side: DoubleSide,
       }),
     );
     mesh.castShadow = true;
@@ -233,10 +237,15 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
         emissiveIntensity: 0,
         roughness: 0.5,
         metalness: 0.1,
+        side: DoubleSide,
       });
       registerEmissive(material, 1.7); // shop windows glow at night
     } else {
-      material = new MeshStandardMaterial({ color: Number(colorStr), roughness: 0.85 });
+      material = new MeshStandardMaterial({
+        color: Number(colorStr),
+        roughness: 0.85,
+        side: DoubleSide,
+      });
     }
     const mesh = new Mesh(geo, material);
     mesh.castShadow = kind !== "glass";
@@ -261,6 +270,7 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
       emissiveIntensity: 0,
       roughness: 0.12,
       metalness: 0.55,
+      side: DoubleSide,
     });
     registerEmissive(glassMaterial, 2.4);
     const windows = new InstancedMesh(new PlaneGeometry(0.95, 1.25), glassMaterial, windowSlots.length);
@@ -394,17 +404,6 @@ function walkEdges(
       ctx.bucket(ctx.flatBuckets, `cornice|${ctx.palette.trim}`).addQuad(a3, b3, c3, d3, n3, 0, 0, 1, 1);
     }
 
-    // Mansard fascia: sloped band leaning inward above the roofline.
-    if (ctx.style.mansard && height >= 5 && len >= 3) {
-      a3.set(a[0] + nx * 0.22, height - 0.35, a[1] + nz * 0.22);
-      b3.set(c[0] + nx * 0.22, height - 0.35, c[1] + nz * 0.22);
-      c3.set(c[0] - nx * 0.55, height + 1.35, c[1] - nz * 0.55);
-      d3.set(a[0] - nx * 0.55, height + 1.35, a[1] - nz * 0.55);
-      // Slope normal ≈ blend of outward + up.
-      const slope = new Vector3(nx, 0.55, nz).normalize();
-      ctx.bucket(ctx.flatBuckets, `fascia|${ctx.roofColor}`).addQuad(a3, b3, c3, d3, slope, 0, 0, 1, 1);
-    }
-
     // Storefront: glass band + awnings on the ground floor.
     if (ctx.storefront && len >= 4) {
       const inset = 0.06;
@@ -526,7 +525,7 @@ function buildSignage(scene: Scene, anchors: readonly SignAnchor[]): void {
 
   const atlas = new CanvasTexture(canvas);
   atlas.colorSpace = SRGBColorSpace;
-  const material = new MeshStandardMaterial({ map: atlas, roughness: 0.8 });
+  const material = new MeshStandardMaterial({ map: atlas, roughness: 0.8, side: DoubleSide });
 
   const positions: number[] = [];
   const normals: number[] = [];
