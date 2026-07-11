@@ -50,6 +50,10 @@ export function createHud(deps: HudDeps): void {
           <input type="range" id="hud-volume" min="0" max="100" value="25" />
         </span>
       </div>
+      <div class="hud-row">
+        <label>Crowd</label>
+        <input type="range" id="hud-ambient" min="0" max="100" />
+      </div>
     </div>
     <div class="hud-panel" id="hud-hunt">
       <h3>Scavenger hunt</h3>
@@ -126,6 +130,11 @@ export function createHud(deps: HudDeps): void {
   });
   volumeSlider.addEventListener("input", () => {
     deps.audio.setVolume(Number(volumeSlider.value) / 100);
+  });
+  const ambientSlider = el<HTMLInputElement>("hud-ambient");
+  ambientSlider.value = String(Math.round(deps.audio.ambient * 100));
+  ambientSlider.addEventListener("input", () => {
+    deps.audio.setAmbient(Number(ambientSlider.value) / 100);
   });
 
   // --- scavenger ---

@@ -14,6 +14,8 @@ interface ZoneChannel {
 export class AudioZoneSystem {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private ambientGain: GainNode | null = null;
+  private ambientValue: number = AMBIENT_LOOP.gain;
   private readonly channels = new Map<AudioZoneId, ZoneChannel>();
   private readonly loading = new Set<AudioZoneId>();
   private active: AudioZoneId | null = null;
@@ -28,6 +30,18 @@ export class AudioZoneSystem {
 
   get muted(): boolean {
     return this.mutedValue;
+  }
+
+  get ambient(): number {
+    return this.ambientValue;
+  }
+
+  /** Ambience bed level relative to the music (0..1). */
+  setAmbient(value: number): void {
+    this.ambientValue = Math.max(0, Math.min(1, value));
+    if (this.ctx && this.ambientGain) {
+      this.ambientGain.gain.setTargetAtTime(this.ambientValue, this.ctx.currentTime, 0.05);
+    }
   }
 
   /** Call from the user gesture (click-to-enter) to satisfy autoplay policy. */
@@ -56,7 +70,8 @@ export class AudioZoneSystem {
       if (!res.ok) return; // ambience is optional — skip if absent
       const buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
       const gain = this.ctx.createGain();
-      gain.gain.value = AMBIENT_LOOP.gain;
+      gain.gain.value = this.ambientValue;
+      this.ambientGain = gain;
       gain.connect(this.master);
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
