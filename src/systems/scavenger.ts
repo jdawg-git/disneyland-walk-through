@@ -307,7 +307,9 @@ function starGeometry(): ExtrudeGeometry {
   const inner = 0.21;
   for (let i = 0; i < 10; i++) {
     const r = i % 2 === 0 ? outer : inner;
-    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    // Start the first OUTER point straight up (+90°) so the star stands on
+    // two legs instead of balancing on one point (upside down).
+    const a = (i / 10) * Math.PI * 2 + Math.PI / 2;
     const x = Math.cos(a) * r;
     const y = Math.sin(a) * r;
     if (i === 0) shape.moveTo(x, y);
