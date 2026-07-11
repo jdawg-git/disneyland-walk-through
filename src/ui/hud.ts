@@ -31,7 +31,7 @@ export function createHud(deps: HudDeps): void {
   hud.innerHTML = `
     <div class="hud-panel" id="hud-status">
       <div id="hud-land">Disneyland</div>
-      <div id="hud-legend">WASD move · mouse look · Shift sprint<br>N day/night · H hide HUD · Esc mouse</div>
+      <div id="hud-legend">WASD move · mouse look · hold Shift to run<br>N day/night · H hide HUD · Esc frees cursor</div>
     </div>
     <div class="hud-panel" id="hud-env">
       <div class="hud-row">

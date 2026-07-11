@@ -111,19 +111,26 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   };
 
   // --- Stone gatehouse base (front faces +Z / the hub) ---
-  const gate = new Mesh(new BoxGeometry(16, 9, 9), stone);
-  gate.position.set(0, 4.5, 6);
-  gate.castShadow = true;
-  gate.receiveShadow = true;
-  castle.add(gate);
-
-  // Arched entry suggestion: dark inset portal.
-  const portal = new Mesh(
-    new BoxGeometry(4.2, 6, 0.6),
+  // Real walk-through: two flanking blocks + a lintel leave a 4.5 m-wide,
+  // 5.5 m-tall passage at local x −2.25..2.25 matching the OSM corridor.
+  for (const side of [-1, 1]) {
+    const flank = new Mesh(new BoxGeometry(5.75, 9, 9), stone);
+    flank.position.set(side * 5.125, 4.5, 6);
+    flank.castShadow = true;
+    flank.receiveShadow = true;
+    castle.add(flank);
+  }
+  const lintel = new Mesh(new BoxGeometry(16, 3.5, 9), stone);
+  lintel.position.set(0, 7.25, 6);
+  lintel.castShadow = true;
+  castle.add(lintel);
+  // Dark passage ceiling so the tunnel reads as an interior.
+  const passageCeiling = new Mesh(
+    new BoxGeometry(4.5, 0.2, 9),
     new MeshStandardMaterial({ color: 0x1c1824, roughness: 1 }),
   );
-  portal.position.set(0, 3, 10.6);
-  castle.add(portal);
+  passageCeiling.position.set(0, 5.4, 6);
+  castle.add(passageCeiling);
 
   tower(-8.5, 8, 1.9, 10, roof, stone);
   tower(8.5, 8, 1.9, 10, roof, stone);
@@ -146,10 +153,18 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   tower(4.2, 5.2, 1.15, 13.5, roof, cream);
 
   // --- Rear keep + central spire ---
-  const keep = new Mesh(new BoxGeometry(9, 13, 7), pinkDeep);
-  keep.position.set(0, 10.5, -5.5);
-  keep.castShadow = true;
-  castle.add(keep);
+  // Split into two towers + a high bridge so the walk-through corridor
+  // continues north into Fantasyland underneath.
+  for (const side of [-1, 1]) {
+    const keepTower = new Mesh(new BoxGeometry(3.5, 13, 7), pinkDeep);
+    keepTower.position.set(side * 4, 10.5, -5.5);
+    keepTower.castShadow = true;
+    castle.add(keepTower);
+  }
+  const keepBridge = new Mesh(new BoxGeometry(4.5, 5, 7), pinkDeep);
+  keepBridge.position.set(0, 14.5, -5.5);
+  keepBridge.castShadow = true;
+  castle.add(keepBridge);
 
   tower(0, -5.5, 2.1, 24, roofDeep, pink); // the tall signature spire
   tower(-2.6, -7.5, 1.0, 19, roof, cream);

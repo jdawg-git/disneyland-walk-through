@@ -366,8 +366,14 @@ for (const el of data.elements) {
       const pts = simplify(raw, 0.4);
       paths.push({ id: el.id, kind: tags["highway"] ?? "footway", points: pts });
     } else if (tags["natural"] === "water" || tags["waterway"] !== undefined) {
+      // Only closed rings are water areas; open polylines (stream/bank
+      // centerlines) would polygon-fill into phantom water sheets.
       const outer = simplify(raw, 0.5);
-      if (outer.length >= 4) {
+      const first = outer[0];
+      const last = outer[outer.length - 1];
+      const closed =
+        outer.length >= 4 && first && last && Math.hypot(first[0] - last[0], first[1] - last[1]) < 1.0;
+      if (closed) {
         const name = pickName(tags);
         water.push({ id: el.id, ...(name !== undefined ? { name } : {}), outer });
       }

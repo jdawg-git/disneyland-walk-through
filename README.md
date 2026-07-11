@@ -16,8 +16,8 @@ npm run dev
 Open the printed URL in Chrome and click to enter the park. You spawn in
 Town Square looking up Main Street at Sleeping Beauty Castle.
 
-**Controls**: WASD move · mouse look · Shift sprint · **N** day/night ·
-**H** hide HUD · Esc release mouse
+**Controls**: WASD move · mouse look · hold **Shift** to run · **N** day/night ·
+**H** hide HUD · **Esc** frees the cursor for the HUD (click the view to keep walking)
 
 ## What's inside
 

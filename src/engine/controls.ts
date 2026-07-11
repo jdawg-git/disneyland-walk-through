@@ -1,8 +1,8 @@
 import { PerspectiveCamera, Vector3 } from "three";
 
 export const EYE_HEIGHT = 1.7;
-const WALK_SPEED = 3.0; // m/s — comfortable stroll
-const SPRINT_SPEED = 6.5;
+const WALK_SPEED = 4.5; // m/s — brisk theme-park pace
+const SPRINT_SPEED = 10; // hold Shift to run
 const LOOK_SENSITIVITY = 0.0023;
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
 

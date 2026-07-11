@@ -55,4 +55,21 @@ body {
   margin-top: 1.2rem;
   font-size: 0.8rem;
   opacity: 0.55;
+  line-height: 1.6;
+}
+
+#resume-pill {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  pointer-events: none;
+  color: #fdf6e3;
+  background: rgba(10, 16, 38, 0.78);
+  border: 1px solid rgba(253, 246, 227, 0.25);
+  border-radius: 999px;
+  padding: 7px 18px;
+  font-size: 12.5px;
+  backdrop-filter: blur(4px);
 }

@@ -103,3 +103,22 @@ Running log of how this project is built and why. Newest decisions at the bottom
   otherwise resets the counters — measurements read 1 call/1 tri).
 - Main Street rooflines carry instanced string-light bulbs (one InstancedMesh,
   ~1.3 m spacing) — the signature night look, still zero point lights.
+
+## Playtest fixes (2026-07-10)
+
+- Pointer lock UX: fullscreen overlay only before FIRST entry; afterwards Esc
+  shows a non-blocking pill and the HUD stays clickable; clicking the canvas
+  re-locks. requestPointerLock failures (headless/permissions) no longer trap
+  the player on the overlay.
+- Water: OSM maps some streams as OPEN polylines tagged as water; filling
+  them made phantom sheets. PARK_LAYOUT now keeps only closed rings (same
+  rule in fetch-osm for future bakes).
+- Walkable grid order: boundary → block water/greens/buildings → CARVE real
+  footway/pedestrian ribbons (restores every bridge + the castle corridor) →
+  re-block generic buildings (castle 331440228 excluded — its mesh has a real
+  gate). Instanced wooden decks render where walkways cross water.
+- Castle: gatehouse rebuilt as flanks + lintel (4.5 m opening), keep split
+  into twin towers + high bridge — you can walk hub → Fantasyland through it.
+- Connectivity is now unit-tested: BFS flood-fill from spawn must reach all
+  12 stars.
+- Walk 4.5 m/s, run (hold Shift) 10 m/s.

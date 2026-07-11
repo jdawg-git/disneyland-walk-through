@@ -55,7 +55,27 @@ export interface ParkLayout {
   readonly greens: readonly BakedGreen[];
 }
 
-export const PARK_LAYOUT = layoutJson as unknown as ParkLayout;
+/** A ring is closed when its endpoints (nearly) meet — fillable as area. */
+export function isClosedRing(points: readonly Pt[]): boolean {
+  if (points.length < 4) return false;
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return false;
+  return Math.hypot(first[0] - last[0], first[1] - last[1]) < 1.0;
+}
+
+const rawLayout = layoutJson as unknown as ParkLayout;
+
+/**
+ * OSM maps some streams/canal banks as OPEN polylines tagged as water;
+ * polygon-filling those produces phantom water sheets. Only closed rings
+ * are kept — this filter feeds terrain, the walkable grid, and the debug
+ * map alike.
+ */
+export const PARK_LAYOUT: ParkLayout = {
+  ...rawLayout,
+  water: rawLayout.water.filter((w) => isClosedRing(w.outer)),
+};
 
 export function polygonCentroid(points: readonly Pt[]): Pt {
   let sx = 0;

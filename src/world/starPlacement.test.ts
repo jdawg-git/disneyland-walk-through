@@ -26,4 +26,21 @@ describe("scavenger star placement", () => {
       expect(star.clue.length).toBeGreaterThan(20);
     }
   });
+
+  it("every star is REACHABLE on foot from spawn (bridges + castle corridor connect)", () => {
+    const reachable = grid.reachableFrom(2, 285); // Town Square spawn
+    for (const star of STARS) {
+      const [x, , z] = star.position;
+      expect(
+        reachable(x, z),
+        `star ${star.id} at (${x}, ${z}) is walkable but not connected to spawn`,
+      ).toBe(true);
+    }
+  });
+
+  it("the castle corridor connects the hub to Fantasyland directly", () => {
+    const reachable = grid.reachableFrom(5.8, 20); // south of the castle gate
+    // Just north of the castle, in the Fantasyland courtyard.
+    expect(reachable(5.8, -40)).toBe(true);
+  });
 });
