@@ -134,3 +134,12 @@ Running log of how this project is built and why. Newest decisions at the bottom
   being permanently stuck is now impossible by construction.
 - Regression tests: lawns walkable + ≥80% of the walkway network reachable
   from spawn (84% at time of writing).
+
+## Tuning session (2026-07-10 evening)
+
+- Audio defaults: music volume 33%, crowd ambience bed 100% relative (the
+  crowd recording is intrinsically ~6 dB quieter than the music tracks);
+  both remain live-adjustable in the HUD.
+- Date picker removed from the HUD — crowds are always a typical day
+  (AVERAGE_LEVEL = 5 in main.ts). The crowd model + ?date/?hour dev params
+  remain for the verify harness.

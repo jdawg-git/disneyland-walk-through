@@ -32,9 +32,8 @@ Town Square looking up Main Street at Sleeping Beauty Castle.
   of emissive windows, string lights, and lamp globes bloom to life and the
   castle is floodlit.
 - **Per-land music zones** that crossfade as you cross land boundaries.
-- **Historical crowd simulation**: pick a date and the park populates with
-  wandering guests to match (Christmas week is packed; a September Wednesday
-  is blissfully empty).
+- **Ambient crowds**: wandering guests fill the walkways at a typical-day
+  density, with a quiet crowd-murmur audio bed under the land music.
 - **Scavenger hunt**: 12 golden stars found in sequence, clue by clue, ending
   with fireworks over the castle.
 - **AI tour guide**: a Gemini-powered guide who knows where you are and gives
@@ -74,20 +73,14 @@ To find coordinates, open the dev server with `?debug=map` for a top-down
 park map: the cursor readout shows park coordinates and clicking logs them
 to the console.
 
-## Adjusting the crowd model
+## Adjusting the crowds
 
-Everything is in [src/config/crowds.ts](src/config/crowds.ts):
-
-- `MONTH_BASELINE` — month → level 1–10 (calibrate against a live crowd
-  calendar; see the TODO in that file)
-- `DOW_MULTIPLIER` — day-of-week factors (Saturdays busiest)
-- `HOLIDAYS` — absolute overrides for specific dates
-- `TIME_OF_DAY_CURVE` — hourly density (midday peak)
-- `MAX_NPCS` — global cap on rendered guests
-
-Deterministic: the same date always produces the same crowd level, no live
-API involved. Test URLs accept `?date=2026-12-28&hour=14` to reproduce any
-moment.
+The park always shows a typical average day (level 5/10, set as
+`AVERAGE_LEVEL` in [src/main.ts](src/main.ts)). The full historical crowd
+model still lives in [src/config/crowds.ts](src/config/crowds.ts) and backs
+the dev URL params — `?date=2026-12-28&hour=14` reproduces any date's
+density (Christmas week is packed; a September Wednesday is empty).
+`MAX_NPCS` caps rendered guests.
 
 ## Scripts
 

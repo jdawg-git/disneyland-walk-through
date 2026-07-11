@@ -60,26 +60,15 @@ function boot(p: AppParams): void {
   const scavenger = new ScavengerSystem(scene);
   const guide = new GuideSystem();
 
-  // Crowd simulation: date picker (or ?date=) → level 1–10 → NPC density.
+  // Crowd simulation: a typical average day, always. The historical-date
+  // model still backs the ?date=YYYY-MM-DD&hour=H dev params (used by the
+  // verify harness), but there is no in-game date picker.
+  const AVERAGE_LEVEL = 5;
   const crowd = new CrowdSystem(scene, p.seed);
-  const today = new Date();
-  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  let crowdDate = p.date ?? localToday;
-  const crowdHour = p.hour ?? today.getHours();
-  let forecast = crowdForecast(crowdDate);
-  const applyCrowd = (): void => {
-    forecast = crowdForecast(crowdDate);
-    crowd.setCount(npcCount(forecast.level, crowdHour));
-  };
-  applyCrowd();
-  const crowdControl = {
-    label: (): string => forecast.label,
-    date: (): string => crowdDate,
-    setDate: (d: string): void => {
-      crowdDate = d;
-      applyCrowd();
-    },
-  };
+  const forecast = p.date
+    ? crowdForecast(p.date)
+    : { level: AVERAGE_LEVEL, label: `A typical day — Level ${AVERAGE_LEVEL}/10` };
+  crowd.setCount(npcCount(forecast.level, p.hour ?? 14));
 
   // Applied after scene build so registered emissive materials pick it up.
   if (p.time) dayNight.setTime(p.time, true);
@@ -106,7 +95,6 @@ function boot(p: AppParams): void {
       scavenger,
       zones,
       guide,
-      crowd: crowdControl,
       guideContext: () => {
         const s = scavenger.state;
         return {

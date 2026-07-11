@@ -21,7 +21,7 @@ export class AudioZoneSystem {
   private active: AudioZoneId | null = null;
   private pending: AudioZoneId | null = null;
 
-  private volumeValue = 0.25;
+  private volumeValue = 0.33;
   private mutedValue = false;
 
   get volume(): number {

@@ -28,5 +28,5 @@ export const CROSSFADE_SECONDS = 1.5;
  */
 export const AMBIENT_LOOP = {
   file: "/audio/crowd.mp3",
-  gain: 0.25,
+  gain: 1.0,
 } as const;
