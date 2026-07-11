@@ -208,3 +208,25 @@ Running log of how this project is built and why. Newest decisions at the bottom
   with earth-to-green strata, log-flume chute hugging the drop face into a
   splash pool, stump crown. Colliders added; star 7 reachability verified.
 - Tiki: carved totem stacks; Station: white gingerbread trim bands.
+
+## v2 Pass 3 — the park comes alive
+
+- Railroad train: unordered narrow-gauge segments stitched into one loop
+  (longest-first greedy chaining, 40 m tolerance, spurs dropped, consecutive
+  duplicate points removed), closed CatmullRom bridges the ~44 m station
+  gap. Engine + tender + 3 canopied cars follow by arc length; smoke puffs.
+- Tom Sawyer Island: built from the Rivers of America INNER RING (the
+  island is literally the hole in the river polygon) — terraced landmass,
+  60 pines, shoreline rocks, log-stockade fort. Unreachable by design
+  (river blocks the grid; unit-tested).
+- Mark Twain steamboat: channel-midline loop derived by marching outward
+  from each island-ring vertex to the far bank (609 m loop, validated
+  point-free of land); triple-decker with rotating paddle wheel.
+- Backstage screening: pine walls + berm mounds behind Pirates/Mansion/
+  Small World/Space Mountain show buildings.
+- BUG LESSON (headless Chromium): the first rAF timestamp can PRECEDE
+  performance.now() captured at loop start → NEGATIVE dt → negative curve
+  u → three's arc-length binary search indexes arcLengths[-1] → NaN t →
+  "undefined reading x" deep in CatmullRomCurve3. Fixed: loop clamps dt to
+  [0, MAX_DT]; vehicles use safe modulo; updatables are isolated (a
+  throwing hook is disabled + reported, never kills the render loop).

@@ -1,4 +1,15 @@
-import type { Scene } from "three";
+import {
+  BoxGeometry,
+  ConeGeometry,
+  CylinderGeometry,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  Quaternion,
+  Vector3,
+  type Scene,
+} from "three";
 import { mulberry32, type Rng } from "../engine/random";
 import { landAt, type LandId } from "../config/lands";
 import { LANDMARKS, type LandmarkKey } from "../config/landmarks";
@@ -14,9 +25,12 @@ import { buildSpaceMountain } from "./landmarks/spaceMountain";
 import { buildSplashMountain } from "./landmarks/splashMountain";
 import { buildTikiRoom } from "./landmarks/tikiRoom";
 import { buildTrainStation } from "./landmarks/trainStation";
+import { buildIsland } from "./island";
 import { buildProps, type PropPlacements } from "./props";
 import { buildRailroad } from "./railroad";
+import { buildSteamboat } from "./steamboat";
 import { buildTerrain } from "./terrain";
+import { buildTrain } from "./train";
 
 const LANDMARK_BUILDERS: Record<LandmarkKey, (scene: Scene, x: number, z: number) => void> = {
   castle: buildCastle,
@@ -78,6 +92,88 @@ export function buildPark(scene: Scene, seed: number): void {
   }
 
   buildProps(scene, generatePropPlacements(seed), seed);
+
+  // The park comes alive: island scenery, circling vehicles, and tree/berm
+  // screens hiding the backstage show buildings.
+  buildIsland(scene, seed);
+  buildTrain(scene);
+  buildSteamboat(scene);
+  buildScreening(scene, seed);
+}
+
+/**
+ * Backstage screening: dense pine walls + long berm mounds along the sight
+ * lines behind the big show buildings (the real park hides its warehouses
+ * exactly this way). Purely visual — no collision.
+ */
+const SCREEN_LINES: readonly (readonly [Pt, Pt])[] = [
+  [[-226, 201], [-174, 201]], // behind Pirates of the Caribbean
+  [[-320, 104], [-286, 104]], // behind the Haunted Mansion
+  [[66, -254], [162, -254]], // behind it's a small world
+  [[188, 118], [188, 205]], // east of Space Mountain
+];
+
+function buildScreening(scene: Scene, seed: number): void {
+  const rng = mulberry32(seed + 900);
+  const moundMaterial = new MeshStandardMaterial({ color: 0x66905a, roughness: 1 });
+  const trunkMaterial = new MeshStandardMaterial({ color: 0x4f3c2c, roughness: 1 });
+  const pineMaterial = new MeshStandardMaterial({ color: 0x3a6132, roughness: 1, flatShading: true });
+
+  const placements: { x: number; z: number; s: number }[] = [];
+  for (const [a, b] of SCREEN_LINES) {
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    const length = Math.hypot(dx, dz);
+    const yaw = Math.atan2(dx, dz);
+
+    const mound = new Mesh(new BoxGeometry(5, 2.4, length + 6), moundMaterial);
+    mound.position.set((a[0] + b[0]) / 2, 1.2, (a[1] + b[1]) / 2);
+    mound.rotation.y = yaw;
+    mound.receiveShadow = true;
+    scene.add(mound);
+
+    // Two staggered pine rows along the line.
+    const nx = dz / length;
+    const nz = -dx / length;
+    for (let d = 0; d <= length; d += 3) {
+      const t = d / length;
+      for (const row of [-1.8, 1.8]) {
+        placements.push({
+          x: a[0] + dx * t + nx * row + (rng() - 0.5) * 1.4,
+          z: a[1] + dz * t + nz * row + (rng() - 0.5) * 1.4,
+          s: 1.4 + rng() * 0.8,
+        });
+      }
+    }
+  }
+
+  const trunks = new InstancedMesh(
+    new CylinderGeometry(0.18, 0.26, 2.0, 7),
+    trunkMaterial,
+    placements.length,
+  );
+  const crowns = new InstancedMesh(
+    new ConeGeometry(1.7, 5.4, 8),
+    pineMaterial,
+    placements.length,
+  );
+  const m = new Matrix4();
+  const q = new Quaternion();
+  const up = new Vector3(0, 1, 0);
+  const pos = new Vector3();
+  const scl = new Vector3();
+  placements.forEach((p, i) => {
+    q.setFromAxisAngle(up, rng() * Math.PI * 2);
+    scl.setScalar(p.s);
+    pos.set(p.x, 2.4 + 1.0 * p.s, p.z);
+    m.compose(pos, q, scl);
+    trunks.setMatrixAt(i, m);
+    pos.set(p.x, 2.4 + (2.0 + 2.4) * p.s, p.z);
+    m.compose(pos, q, scl);
+    crowns.setMatrixAt(i, m);
+  });
+  crowns.castShadow = true;
+  scene.add(trunks, crowns);
 }
 
 /** Scatter trees on real planter polygons; march lamps along real paths. */
