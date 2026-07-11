@@ -58,9 +58,14 @@ cp .env.example .env
 Restart the dev server. Without a key the guide panel shows setup
 instructions instead of answering; everything else works normally.
 
-> Note: with a local `.env` the key is embedded in the client bundle — fine
-> for personal use. If you ever deploy this publicly, move the Gemini call
-> behind a small server-side proxy.
+> **Security note**: the guide's prompt is hardened against chat misuse —
+> it refuses off-topic/jailbreak requests, caps input length, rate-limits
+> questions, and scrubs key-like strings from anything it displays. But the
+> key itself is embedded in the client bundle (visible in browser devtools),
+> so prompt hardening protects your quota from mischief *through the chat
+> only*. Sharing with trusted colleagues is fine; set a spending cap in
+> Google AI Studio as a backstop, and move the call behind a server-side
+> proxy before any public deployment.
 
 ## Editing the scavenger hunt
 

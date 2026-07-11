@@ -160,3 +160,16 @@ Running log of how this project is built and why. Newest decisions at the bottom
   three sizes (adult/teen/child at 60/20/20), 1-in-10 wears Mickey ears
   (instanced merged-sphere geometry riding the head). MAX_NPCS 2400,
   average level 6.
+
+## Guide prompt hardening (2026-07-10)
+
+- Persona now scope-locked (park topics only), injection-resistant (guest
+  messages are never instructions; no role changes/"modes"; never discuss
+  the system prompt/API/keys), and refuses to write code.
+- Input guards: 400-char cap, 2.5 s cool-down, 150-question session cap.
+- Everything rendered is scrubbed for Google API key patterns (AIza…) —
+  including the API error-message path. The model never sees the key at all;
+  the real exposure is browser devtools, which only a proxy fixes.
+- Live-verified with the user's key: DAN/system-prompt probe deflected in
+  character, code request refused, and "Where is the Matterhorn?" answered
+  with correct distance + relative direction + real trivia.
