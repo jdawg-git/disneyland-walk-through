@@ -19,3 +19,13 @@ export type AudioZoneId = keyof typeof AUDIO_ZONES;
 
 /** Seconds to crossfade between land tracks. */
 export const CROSSFADE_SECONDS = 1.5;
+
+/**
+ * Always-on ambient bed that loops everywhere, under the land music.
+ * `gain` is relative to the music level (0.05 = very quiet murmur); the
+ * HUD mute/volume controls affect it together with the music.
+ */
+export const AMBIENT_LOOP = {
+  file: "/audio/crowd.mp3",
+  gain: 0.05,
+} as const;

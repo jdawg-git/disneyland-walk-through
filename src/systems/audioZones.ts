@@ -1,4 +1,4 @@
-import { AUDIO_ZONES, CROSSFADE_SECONDS, type AudioZoneId } from "../config/audio";
+import { AMBIENT_LOOP, AUDIO_ZONES, CROSSFADE_SECONDS, type AudioZoneId } from "../config/audio";
 
 interface ZoneChannel {
   gain: GainNode;
@@ -40,10 +40,31 @@ export class AudioZoneSystem {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.mutedValue ? 0 : this.volumeValue;
     this.master.connect(this.ctx.destination);
+    void this.startAmbient();
     if (this.pending) {
       const zone = this.pending;
       this.pending = null;
       this.setZone(zone);
+    }
+  }
+
+  /** Quiet park-wide ambience loop, under the music, behind the master. */
+  private async startAmbient(): Promise<void> {
+    if (!this.ctx || !this.master) return;
+    try {
+      const res = await fetch(AMBIENT_LOOP.file, { cache: "no-cache" });
+      if (!res.ok) return; // ambience is optional — skip if absent
+      const buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
+      const gain = this.ctx.createGain();
+      gain.gain.value = AMBIENT_LOOP.gain;
+      gain.connect(this.master);
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(gain);
+      source.start();
+    } catch (err) {
+      console.warn("ambient loop failed to load", err);
     }
   }
 
