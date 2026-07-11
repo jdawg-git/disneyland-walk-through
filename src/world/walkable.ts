@@ -29,6 +29,8 @@ const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
   { kind: "box", x: 15.15, z: -10.5, halfW: 6.75, halfD: 11.5 },
   // Main Street Station mound (entrance tunnels stay open on both sides).
   { kind: "box", x: 2.6, z: 300.2, halfW: 15, halfD: 7.5 },
+  // Partners statue pedestal at the hub center (streetFurniture.ts).
+  { kind: "circle", x: 1, z: 55, r: 2.2 },
   // Space Mountain dome + concourse.
   { kind: "circle", x: 151, z: 162, r: 33.5 },
   // Matterhorn.

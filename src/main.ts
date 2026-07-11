@@ -22,6 +22,8 @@ declare global {
   interface Window {
     __PARK_READY__?: boolean;
     __PARK_STATS__?: () => { calls: number; triangles: number };
+    /** Debug handle for the verify harness (raycast inspection). */
+    __PARK_SCENE__?: Scene;
   }
 }
 
@@ -46,6 +48,7 @@ function boot(p: AppParams): void {
     calls: bundle.renderer.info.render.calls,
     triangles: bundle.renderer.info.render.triangles,
   });
+  window.__PARK_SCENE__ = scene;
   const dayNight = new DayNightSystem(scene);
   dayNight.bindBloom(bundle.setBloomIntensity);
 

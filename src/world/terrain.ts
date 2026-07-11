@@ -15,7 +15,7 @@ import { registerUpdatable } from "../engine/updatables";
 import { LANDS, landAt } from "../config/lands";
 import { PARK_LAYOUT, pointInPolygon, polygonCentroid } from "../data/parkLayout";
 import { rippleTexture } from "./textures";
-import { flatPolygonGeometry } from "./shapeUtil";
+import { flatPolygonGeometry, mergeFlatGeometries } from "./shapeUtil";
 
 /**
  * Ground layering (bottom to top, tiny y offsets to avoid z-fighting):
@@ -60,22 +60,35 @@ export function buildTerrain(scene: Scene): void {
       new MeshStandardMaterial({ color: plazaColor, roughness: 0.92 }),
     );
   }
+  // Merge the hundreds of plaza rings into one mesh per land material —
+  // individually they were ~200 draw calls.
   const defaultPlazaMaterial = new MeshStandardMaterial({ color: 0xc4b8a4, roughness: 0.92 });
+  const plazaGeos = new Map<string, ReturnType<typeof flatPolygonGeometry>[]>();
   for (const plaza of PARK_LAYOUT.plazas) {
     const c = polygonCentroid(plaza.outer);
     const land = landAt(c[0], c[1]);
-    const mesh = new Mesh(
-      flatPolygonGeometry(plaza.outer),
-      (land && plazaMaterials.get(land.id)) ?? defaultPlazaMaterial,
-    );
+    const key = land && plazaMaterials.has(land.id) ? land.id : "__default";
+    let bucketList = plazaGeos.get(key);
+    if (!bucketList) {
+      bucketList = [];
+      plazaGeos.set(key, bucketList);
+    }
+    bucketList.push(flatPolygonGeometry(plaza.outer));
+  }
+  for (const [key, geos] of plazaGeos) {
+    const merged = mergeFlatGeometries(geos);
+    if (!merged) continue;
+    const mesh = new Mesh(merged, plazaMaterials.get(key) ?? defaultPlazaMaterial);
     mesh.position.y = 0.03;
     mesh.receiveShadow = true;
     scene.add(mesh);
   }
 
+  // All planter greens merge into a single mesh (~630 rings otherwise).
   const grassMaterial = new MeshStandardMaterial({ color: 0x6f9c4e, roughness: 1 });
-  for (const g of PARK_LAYOUT.greens) {
-    const mesh = new Mesh(flatPolygonGeometry(g.outer), grassMaterial);
+  const grassMerged = mergeFlatGeometries(PARK_LAYOUT.greens.map((g) => flatPolygonGeometry(g.outer)));
+  if (grassMerged) {
+    const mesh = new Mesh(grassMerged, grassMaterial);
     mesh.position.y = 0.045;
     mesh.receiveShadow = true;
     scene.add(mesh);
@@ -99,8 +112,11 @@ export function buildTerrain(scene: Scene): void {
       ripple.offset.y += dt * 0.008;
     });
   }
-  for (const w of PARK_LAYOUT.water) {
-    const mesh = new Mesh(flatPolygonGeometry(w.outer, w.inner), waterMaterial);
+  const waterMerged = mergeFlatGeometries(
+    PARK_LAYOUT.water.map((w) => flatPolygonGeometry(w.outer, w.inner)),
+  );
+  if (waterMerged) {
+    const mesh = new Mesh(waterMerged, waterMaterial);
     mesh.position.y = 0.08;
     scene.add(mesh);
   }

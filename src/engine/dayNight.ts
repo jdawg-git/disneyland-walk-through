@@ -32,9 +32,9 @@ const DAY: LightingPreset = {
   sunColor: new Color(0xfff2d8),
   sunIntensity: 2.6,
   sunPosition: new Vector3(180, 260, 120),
-  hemiSky: new Color(0xbfdcf5),
-  hemiGround: new Color(0x8a7f6a),
-  hemiIntensity: 0.85,
+  hemiSky: new Color(0xc6ddf2),
+  hemiGround: new Color(0x9c907c),
+  hemiIntensity: 1.1,
   bloomIntensity: 0.25,
   emissiveT: 0,
 };

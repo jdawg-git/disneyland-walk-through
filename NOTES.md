@@ -248,3 +248,38 @@ Running log of how this project is built and why. Newest decisions at the bottom
   plazas absorbed the well-connected guest surfaces from the paths bucket).
 - Tomorrowland polygon extended east to the Autopia area; 10/10 zone label
   spot checks pass.
+
+## v2 Pass 5 — style kit + street furniture
+
+- Facade kit (buildings.ts rewrite): every wall is generated per footprint
+  edge with METER-SCALED UVs (1 texture tile = 4 m) over near-grayscale
+  canvas textures (brick/clapboard/board/panel/plaster) tinted by the land
+  palette — one texture serves every color; walls merge per
+  (texture × color) bucket. Per-land styles in src/config/styles.ts.
+- Storefronts: ground-floor band mapped with a drawn storefront strip
+  (display windows, cream frames, kick panel, door) at one 4 m module per
+  tile; glows warm at night. Instanced tilted awnings (per-instance color)
+  hinge at the wall above the band. Cornice strips + mansard fascia bands
+  straddle rooflines.
+- Signage: one 2048 px canvas atlas (512×128 cells) of real OSM shop
+  names, quads on each building's longest outward edge — one draw call.
+- Main Street roofline: guessed heights quantized to 2–2.5 stories so the
+  street reads as one coherent streetscape (tagged heights respected).
+  Random third stories previously poked above the roofline as dark
+  "floating squares" from street level.
+- Street furniture from real amenity nodes: 81 benches (+ themed trash
+  cans, lids tinted per land), 54 drinking fountains, 39 decorative
+  fountains, hand-placed popcorn carts + balloon vendors (instanced
+  clusters, some with Mickey ears), Partners statue at the hub center
+  (small collider added; hub planter kept tree-free so it stays visible).
+- Day lighting lifted (hemi 0.85→1.1, warmer ground bounce): shadow-side
+  facades no longer read as black mud.
+- PERF LESSON: Pass 4 rendered every plaza/green/water ring as its own
+  mesh — 882 ShapeGeometry draw calls that frustum culling hid at street
+  level but the overview saw all at once (1603 calls, budget 1200).
+  mergeFlatGeometries() (shapeUtil.ts) now merges them per material:
+  worst frame 735 calls / 668k tris. Audit from the OVERVIEW camera, not
+  the street.
+- Debug: window.__PARK_SCENE__ exposes the scene for raycast probes (used
+  to identify "floating slab" artifacts — they were correctly-placed
+  awnings over unlit glass, not bugs).

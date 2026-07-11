@@ -46,7 +46,8 @@ describe("scavenger star placement", () => {
   });
 
   it("lawns are walkable (grass does not block)", () => {
-    expect(grid.isWalkable(1, 55), "hub garden").toBe(true);
+    // (1,55) itself is now the Partners statue pedestal; probe beside it.
+    expect(grid.isWalkable(1, 60), "hub garden").toBe(true);
     expect(grid.isWalkable(-30, 290), "Town Square lawn").toBe(true);
   });
 

@@ -29,6 +29,7 @@ import { buildIsland } from "./island";
 import { buildProps, type PropPlacements } from "./props";
 import { buildRailroad } from "./railroad";
 import { buildSteamboat } from "./steamboat";
+import { buildStreetFurniture } from "./streetFurniture";
 import { buildTerrain } from "./terrain";
 import { buildTrain } from "./train";
 
@@ -92,6 +93,7 @@ export function buildPark(scene: Scene, seed: number): void {
   }
 
   buildProps(scene, generatePropPlacements(seed), seed);
+  buildStreetFurniture(scene, seed);
 
   // The park comes alive: island scenery, circling vehicles, and tree/berm
   // screens hiding the backstage show buildings.
@@ -193,7 +195,12 @@ function generatePropPlacements(seed: number): PropPlacements {
     const area = Math.abs(shoelace(green.outer));
     const count = Math.min(10, Math.max(1, Math.floor(area / 60)));
     const bucket = species === "palm" ? palm : species === "pine" ? pine : round;
-    for (const p of samplePolygon(green.outer, count, rng)) bucket.push(p);
+    for (const p of samplePolygon(green.outer, count, rng)) {
+      // Keep the hub's central planter clear: the Partners statue stands
+      // there (streetFurniture.ts), and a canopy would swallow it.
+      if (Math.hypot(p[0] - 1, p[1] - 55) < 8) continue;
+      bucket.push(p);
+    }
   }
 
   // --- Lamps along walkways (every ~24 m, capped) ---
