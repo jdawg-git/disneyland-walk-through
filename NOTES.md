@@ -173,3 +173,23 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - Live-verified with the user's key: DAN/system-prompt probe deflected in
   character, code request refused, and "Where is the Matterhorn?" answered
   with correct distance + relative direction + real trivia.
+
+## v2 Pass 1 — landmark icons (castle, mountains)
+
+- New shared infra: src/engine/updatables.ts (per-frame animation registry,
+  respects ?freeze=1), src/engine/noise.ts (seeded 2D value noise + fbm),
+  src/world/textures.ts (procedural CanvasTexture factory — stained glass
+  first, style-kit textures land in Pass 5).
+- Castle v2: extruded gatehouse with a TRUE pointed-arch tunnel (matches the
+  collider gap exactly — local x ±2.25), instanced crenellation merlons,
+  lathe turrets with corbel flares, gold arch trim + rings + finials,
+  stained-glass rose window (canvas), waving pennant flags (updatable).
+- Matterhorn v2: fbm + ridged-noise displaced cone, vertex-colored snow by
+  height AND slope (ledge snow). Lighting lesson: the west face is the
+  shadow side — rock palette must stay light (0x939caa) or the whole
+  mountain reads charcoal from Fantasyland.
+- Space Mountain v2: lathe with the real concave profile + 12 TubeGeometry
+  ribs kicking out past the rim into upswept tips; summit needle.
+- Big Thunder v2: terraced hoodoo buttes (triangle-wave terracing + fbm),
+  strata bands as vertex colors, timber headframe + trestle props.
+- Perf after Pass 1: 682 calls / 475k tris worst frame (budget 1200).

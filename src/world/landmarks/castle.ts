@@ -2,21 +2,36 @@ import {
   BoxGeometry,
   Color,
   ConeGeometry,
-  CylinderGeometry,
+  ExtrudeGeometry,
   Group,
+  InstancedMesh,
+  LatheGeometry,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
+  Path,
+  PlaneGeometry,
   Scene,
+  Shape,
+  ShapeGeometry,
   SphereGeometry,
   TorusGeometry,
+  Vector2,
 } from "three";
 import { registerEmissive } from "../../engine/emissive";
+import { registerUpdatable } from "../../engine/updatables";
+import { stainedGlassTexture } from "../textures";
 
 /**
- * Sleeping Beauty Castle — the park's visual anchor. Bespoke stylized mesh:
- * grey stone gatehouse base, pink upper keeps, blue conical roofs stepping
- * up to a tall central spire, gold trim that glows at night. Faces south
- * (+Z) down Main Street. Position from the OSM footprint centroid.
+ * Sleeping Beauty Castle v2 — the park's anchor, rebuilt for recognizability:
+ * stone gatehouse with a TRUE pointed-arch walk-through tunnel, crenellated
+ * parapets (instanced merlons), swept lathe turrets with corbel flares under
+ * blue cone roofs, gold trim + finials, a stained-glass rose window, and
+ * pennant flags that wave. Faces south (+Z) down Main Street.
+ *
+ * Collision contract with walkable.ts: the walk-through corridor is local
+ * x −2.25..2.25 (world 3.2..8.4 after the 1.15 group scale) — the arch
+ * opening below matches it exactly. Keep the group position/scale fixed.
  */
 
 const STONE = 0x9a8f96;
@@ -31,34 +46,22 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
 
   // Walls carry a faint self-emissive tint that rises at night — reads as
   // floodlighting without any real lights (the castle must not go black).
-  const floodlit = (color: number, glowColor: number): MeshStandardMaterial => {
+  const floodlit = (color: number, glowColor: number, rough = 0.9): MeshStandardMaterial => {
     const m = new MeshStandardMaterial({
       color,
-      roughness: 0.9,
+      roughness: rough,
       emissive: new Color(glowColor),
       emissiveIntensity: 0,
     });
     registerEmissive(m, 0.32);
     return m;
   };
-  const stone = floodlit(STONE, 0xb08cc8);
+  const stone = floodlit(STONE, 0xb08cc8, 0.95);
   const pink = floodlit(PINK, 0xe8a0b8);
   const pinkDeep = floodlit(PINK_DEEP, 0xd890b0);
   const cream = floodlit(CREAM, 0xe8c8a8);
-  const roof = new MeshStandardMaterial({
-    color: ROOF_BLUE,
-    roughness: 0.55,
-    emissive: new Color(0x4a68c8),
-    emissiveIntensity: 0,
-  });
-  registerEmissive(roof, 0.22);
-  const roofDeep = new MeshStandardMaterial({
-    color: ROOF_BLUE_DEEP,
-    roughness: 0.55,
-    emissive: new Color(0x3a54a8),
-    emissiveIntensity: 0,
-  });
-  registerEmissive(roofDeep, 0.22);
+  const roof = floodlit(ROOF_BLUE, 0x4a68c8, 0.55);
+  const roofDeep = floodlit(ROOF_BLUE_DEEP, 0x3a54a8, 0.55);
 
   const gold = new MeshStandardMaterial({
     color: 0x8a6a20,
@@ -77,65 +80,119 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   });
   registerEmissive(windowGlow, 2.8);
 
-  const tower = (
+  // ---------------------------------------------------------------------
+  // Gatehouse: one extruded wall with a real pointed-arch tunnel through it.
+  // ---------------------------------------------------------------------
+  const wallShape = new Shape();
+  wallShape.moveTo(-8, 0);
+  wallShape.lineTo(8, 0);
+  wallShape.lineTo(8, 9);
+  wallShape.lineTo(-8, 9);
+  wallShape.closePath();
+  const arch = new Path();
+  arch.moveTo(-2.25, 0);
+  arch.lineTo(-2.25, 3.4);
+  arch.quadraticCurveTo(-2.25, 5.2, 0, 5.8); // left sweep to the point
+  arch.quadraticCurveTo(2.25, 5.2, 2.25, 3.4); // right sweep back down
+  arch.lineTo(2.25, 0);
+  arch.closePath();
+  wallShape.holes.push(arch);
+
+  const gatehouse = new Mesh(
+    new ExtrudeGeometry(wallShape, { depth: 9, bevelEnabled: false }),
+    stone,
+  );
+  gatehouse.position.z = 1.5; // tunnel spans local z 1.5..10.5
+  gatehouse.castShadow = true;
+  gatehouse.receiveShadow = true;
+  castle.add(gatehouse);
+
+  // Arch trim: gold outline following the arch mouth on the front face.
+  const trimShape = new Shape();
+  trimShape.moveTo(-2.65, 0);
+  trimShape.lineTo(-2.65, 3.5);
+  trimShape.quadraticCurveTo(-2.65, 5.55, 0, 6.25);
+  trimShape.quadraticCurveTo(2.65, 5.55, 2.65, 3.5);
+  trimShape.lineTo(2.65, 0);
+  trimShape.lineTo(2.25, 0);
+  trimShape.lineTo(2.25, 3.4);
+  trimShape.quadraticCurveTo(2.25, 5.2, 0, 5.8);
+  trimShape.quadraticCurveTo(-2.25, 5.2, -2.25, 3.4);
+  trimShape.lineTo(-2.25, 0);
+  trimShape.closePath();
+  const archTrim = new Mesh(new ShapeGeometry(trimShape), gold);
+  archTrim.position.z = 10.52;
+  castle.add(archTrim);
+
+  // Crenellation merlons along the gatehouse parapet (front + back edges).
+  const merlonSlots: [number, number, number][] = [];
+  for (let mx = -7.5; mx <= 7.5; mx += 1.5) {
+    merlonSlots.push([mx, 9.45, 10.15], [mx, 9.45, 1.85]);
+  }
+  // And along the mid-tier parapet.
+  for (let mx = -5.6; mx <= 5.6; mx += 1.4) {
+    merlonSlots.push([mx, 16.45, 4.15]);
+  }
+  const merlons = new InstancedMesh(new BoxGeometry(0.75, 0.9, 0.7), stone, merlonSlots.length);
+  const mm = new Matrix4();
+  merlonSlots.forEach((slot, i) => {
+    mm.makeTranslation(slot[0], slot[1], slot[2]);
+    merlons.setMatrixAt(i, mm);
+  });
+  merlons.castShadow = true;
+  castle.add(merlons);
+
+  // ---------------------------------------------------------------------
+  // Turret builder: lathe with base flare + corbel flare, cone roof, gold.
+  // ---------------------------------------------------------------------
+  const turret = (
     tx: number,
     tz: number,
     radius: number,
     height: number,
-    roofMat: MeshStandardMaterial,
     body: MeshStandardMaterial,
+    cap: MeshStandardMaterial,
   ): void => {
-    const shaft = new Mesh(new CylinderGeometry(radius, radius * 1.12, height, 12), body);
-    shaft.position.set(tx, height / 2, tz);
+    const profile = [
+      new Vector2(radius * 1.14, 0),
+      new Vector2(radius, height * 0.14),
+      new Vector2(radius * 0.95, height * 0.7),
+      new Vector2(radius * 1.18, height * 0.78),
+      new Vector2(radius * 1.18, height * 0.86),
+      new Vector2(radius * 1.04, height * 0.9),
+      new Vector2(radius * 1.04, height),
+    ];
+    const shaft = new Mesh(new LatheGeometry(profile, 14), body);
+    shaft.position.set(tx, 0, tz);
     shaft.castShadow = true;
     castle.add(shaft);
 
-    const cap = new Mesh(new ConeGeometry(radius * 1.35, radius * 3.4, 12), roofMat);
-    cap.position.set(tx, height + radius * 1.7, tz);
-    cap.castShadow = true;
-    castle.add(cap);
+    const cone = new Mesh(new ConeGeometry(radius * 1.32, radius * 3.6, 14), cap);
+    cone.position.set(tx, height + radius * 1.8, tz);
+    cone.castShadow = true;
+    castle.add(cone);
 
-    const ring = new Mesh(new TorusGeometry(radius * 1.02, 0.09, 6, 16), gold);
+    const ring = new Mesh(new TorusGeometry(radius * 1.06, 0.09, 6, 18), gold);
     ring.rotation.x = Math.PI / 2;
-    ring.position.set(tx, height - 0.25, tz);
+    ring.position.set(tx, height * 0.88, tz);
     castle.add(ring);
 
-    const finial = new Mesh(new SphereGeometry(0.22, 8, 8), gold);
-    finial.position.set(tx, height + radius * 3.4, tz);
+    const finial = new Mesh(new SphereGeometry(0.2, 8, 8), gold);
+    finial.position.set(tx, height + radius * 3.6, tz);
     castle.add(finial);
 
-    // A lit window near the top of the shaft.
-    const win = new Mesh(new BoxGeometry(0.5, 0.9, 0.1), windowGlow);
-    win.position.set(tx, height * 0.72, tz + radius + 0.02);
+    const win = new Mesh(new BoxGeometry(0.45, 0.85, 0.1), windowGlow);
+    win.position.set(tx, height * 0.62, tz + radius + 0.06);
     castle.add(win);
   };
 
-  // --- Stone gatehouse base (front faces +Z / the hub) ---
-  // Real walk-through: two flanking blocks + a lintel leave a 4.5 m-wide,
-  // 5.5 m-tall passage at local x −2.25..2.25 matching the OSM corridor.
-  for (const side of [-1, 1]) {
-    const flank = new Mesh(new BoxGeometry(5.75, 9, 9), stone);
-    flank.position.set(side * 5.125, 4.5, 6);
-    flank.castShadow = true;
-    flank.receiveShadow = true;
-    castle.add(flank);
-  }
-  const lintel = new Mesh(new BoxGeometry(16, 3.5, 9), stone);
-  lintel.position.set(0, 7.25, 6);
-  lintel.castShadow = true;
-  castle.add(lintel);
-  // Dark passage ceiling so the tunnel reads as an interior.
-  const passageCeiling = new Mesh(
-    new BoxGeometry(4.5, 0.2, 9),
-    new MeshStandardMaterial({ color: 0x1c1824, roughness: 1 }),
-  );
-  passageCeiling.position.set(0, 5.4, 6);
-  castle.add(passageCeiling);
+  // Gate turrets flanking the arch.
+  turret(-8, 8, 2.0, 11, stone, roof);
+  turret(8, 8, 2.0, 11, stone, roof);
 
-  tower(-8.5, 8, 1.9, 10, roof, stone);
-  tower(8.5, 8, 1.9, 10, roof, stone);
-
-  // --- Middle pink tier ---
+  // ---------------------------------------------------------------------
+  // Mid pink tier with parapet + rose window.
+  // ---------------------------------------------------------------------
   const mid = new Mesh(new BoxGeometry(12, 8, 9), pink);
   mid.position.set(0, 12, 0);
   mid.castShadow = true;
@@ -147,35 +204,78 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   midGable.castShadow = true;
   castle.add(midGable);
 
-  tower(-6, -1, 1.6, 17, roofDeep, pinkDeep);
-  tower(6, -1, 1.6, 17, roofDeep, pinkDeep);
-  tower(-4.2, 5.2, 1.15, 13.5, roof, cream);
-  tower(4.2, 5.2, 1.15, 13.5, roof, cream);
+  // Stained-glass rose window on the south face, framed in gold.
+  const rose = new Mesh(
+    new PlaneGeometry(2.7, 2.7),
+    new MeshStandardMaterial({
+      map: stainedGlassTexture(),
+      emissive: new Color(0xffffff),
+      emissiveMap: stainedGlassTexture(),
+      emissiveIntensity: 0.15,
+      roughness: 0.4,
+    }),
+  );
+  registerEmissive(rose.material as MeshStandardMaterial, 1.4, 0.15);
+  rose.position.set(0, 13.2, 4.56);
+  castle.add(rose);
+  const roseFrame = new Mesh(new TorusGeometry(1.55, 0.12, 6, 22), gold);
+  roseFrame.position.set(0, 13.2, 4.55);
+  castle.add(roseFrame);
 
-  // --- Rear keep + central spire ---
-  // Split into two towers + a high bridge so the walk-through corridor
-  // continues north into Fantasyland underneath.
-  for (const side of [-1, 1]) {
-    const keepTower = new Mesh(new BoxGeometry(3.5, 13, 7), pinkDeep);
-    keepTower.position.set(side * 4, 10.5, -5.5);
-    keepTower.castShadow = true;
-    castle.add(keepTower);
-  }
+  turret(-6, -1, 1.7, 17.5, pinkDeep, roofDeep);
+  turret(6, -1, 1.7, 17.5, pinkDeep, roofDeep);
+  turret(-4.2, 5.2, 1.15, 13.5, cream, roof);
+  turret(4.2, 5.2, 1.15, 13.5, cream, roof);
+
+  // ---------------------------------------------------------------------
+  // Rear keep: twin towers + high bridge (corridor passes beneath).
+  // ---------------------------------------------------------------------
+  turret(-4, -5.5, 1.9, 13.5, pinkDeep, roofDeep);
+  turret(4, -5.5, 1.9, 13.5, pinkDeep, roofDeep);
   const keepBridge = new Mesh(new BoxGeometry(4.5, 5, 7), pinkDeep);
   keepBridge.position.set(0, 14.5, -5.5);
   keepBridge.castShadow = true;
   castle.add(keepBridge);
 
-  tower(0, -5.5, 2.1, 24, roofDeep, pink); // the tall signature spire
-  tower(-2.6, -7.5, 1.0, 19, roof, cream);
-  tower(2.6, -7.5, 1.0, 19, roof, cream);
+  // Central signature spire + rear pair.
+  turret(0, -5.5, 2.2, 24, pink, roofDeep);
+  turret(-2.6, -7.5, 1.0, 19, cream, roof);
+  turret(2.6, -7.5, 1.0, 19, cream, roof);
 
-  // Front lit windows on the mid tier.
-  for (const wx of [-3.4, 0, 3.4]) {
-    const win = new Mesh(new BoxGeometry(0.7, 1.3, 0.1), windowGlow);
-    win.position.set(wx, 13, 4.56);
-    castle.add(win);
-  }
+  // ---------------------------------------------------------------------
+  // Pennant flags on the three tallest spires — waving via updatable.
+  // ---------------------------------------------------------------------
+  const flagMaterial = new MeshStandardMaterial({
+    color: 0xd8b23a,
+    roughness: 0.8,
+    side: 2, // DoubleSide
+  });
+  const flags: Group[] = [];
+  const addFlag = (fx: number, fz: number, fy: number): void => {
+    const holder = new Group();
+    const pole = new Mesh(new BoxGeometry(0.07, 1.6, 0.07), gold);
+    pole.position.y = 0.8;
+    holder.add(pole);
+    const pennant = new Shape();
+    pennant.moveTo(0, 0);
+    pennant.lineTo(1.5, 0.28);
+    pennant.lineTo(0, 0.56);
+    pennant.closePath();
+    const cloth = new Mesh(new ShapeGeometry(pennant), flagMaterial);
+    cloth.position.set(0.05, 0.9, 0);
+    holder.add(cloth);
+    holder.position.set(fx, fy, fz);
+    castle.add(holder);
+    flags.push(holder);
+  };
+  addFlag(0, -5.5, 24 + 2.2 * 3.6 + 0.1); // central spire
+  addFlag(-6, -1, 17.5 + 1.7 * 3.6 + 0.1);
+  addFlag(6, -1, 17.5 + 1.7 * 3.6 + 0.1);
+  registerUpdatable((_dt, time) => {
+    flags.forEach((f, i) => {
+      f.rotation.y = Math.sin(time * 2.2 + i * 1.7) * 0.45 + 0.2;
+    });
+  });
 
   castle.scale.setScalar(1.15); // visual-anchor presence from the hub
   castle.position.set(x, 0, z);

@@ -2,6 +2,7 @@ import { Scene } from "three";
 import "./ui/base.css";
 import { FirstPersonControls, EYE_HEIGHT } from "./engine/controls";
 import { DayNightSystem } from "./engine/dayNight";
+import { updateAll } from "./engine/updatables";
 import { applyDebugCamera } from "./engine/debugCamera";
 import { startLoop } from "./engine/loop";
 import { parseParams, type AppParams } from "./engine/params";
@@ -126,6 +127,7 @@ function boot(p: AppParams): void {
       zones.update(dt, bundle.camera.position);
       scavenger.update(dt, bundle.camera.position);
       crowd.update(dt);
+      updateAll(dt);
     }
     bundle.render(dt);
     frames += 1;
