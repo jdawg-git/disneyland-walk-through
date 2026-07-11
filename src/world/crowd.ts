@@ -9,13 +9,22 @@ import {
   SphereGeometry,
   Vector3,
 } from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { MAX_NPCS } from "../config/crowds";
 import { landAt } from "../config/lands";
 import { PARK_LAYOUT, type Pt } from "../data/parkLayout";
 import { mulberry32, type Rng } from "../engine/random";
 
 const WAYPOINT_SPACING = 9; // meters between candidate waypoints on paths
-const NEIGHBOR_RADIUS = 55; // how far an NPC roams for its next target
+const NEIGHBOR_RADIUS = 55; // how far a group roams for its next target
+const EARS_RATE = 0.1; // 1 in 10 guests wears Mickey ears
+
+// Guest sizes: [scale, weight]. Children small, teens mid, adults full.
+const SIZES: readonly (readonly [number, number])[] = [
+  [1.0, 0.6], // adult
+  [0.82, 0.2], // teen
+  [0.58, 0.2], // child
+];
 
 interface Npc {
   x: number;
@@ -24,17 +33,25 @@ interface Npc {
   tz: number;
   speed: number;
   phase: number;
+  scale: number;
+  /** Index of the group leader, or -1 if this NPC leads (or walks alone). */
+  leader: number;
+  /** Personal offset from the leader (formation within the group). */
+  ox: number;
+  oz: number;
 }
 
 /**
- * Ambient pedestrian crowd: one instanced capsule body + sphere head pair,
- * wandering between waypoints sampled from the real OSM walkways. Density
- * is driven by the crowd model (date + hour). NPCs are ambiance — no
- * collision, soft waypoint-following only.
+ * Ambient pedestrian crowd: instanced capsule bodies + heads (+ Mickey ears
+ * for 1 in 10), wandering between waypoints sampled from the real OSM
+ * walkways. Guests travel in groups of 1-4 that stay together, in three
+ * sizes (adults, teens, children). Ambiance only — no collision.
  */
 export class CrowdSystem {
   private readonly bodies: InstancedMesh;
   private readonly heads: InstancedMesh;
+  private readonly ears: InstancedMesh;
+  private readonly earOwners: number[] = []; // ear slot → npc index
   private readonly npcs: Npc[] = [];
   private readonly waypoints: readonly Pt[];
   private readonly rng: Rng;
@@ -50,30 +67,59 @@ export class CrowdSystem {
     const headMaterial = new MeshStandardMaterial({ color: 0xe8c49a, roughness: 0.8 });
     this.heads = new InstancedMesh(new SphereGeometry(0.15, 7, 6), headMaterial, MAX_NPCS);
 
+    // Mickey ears: two little spheres, one merged geometry per eared guest.
+    const earL = new SphereGeometry(0.088, 7, 6);
+    earL.translate(-0.135, 0.1, 0);
+    const earR = new SphereGeometry(0.088, 7, 6);
+    earR.translate(0.135, 0.1, 0);
+    const earGeometry = mergeGeometries([earL, earR]) ?? earL;
+    const earMaterial = new MeshStandardMaterial({ color: 0x111111, roughness: 0.6 });
+    this.ears = new InstancedMesh(earGeometry, earMaterial, Math.ceil(MAX_NPCS * EARS_RATE * 1.5));
+
     const palette = [
       0xc75b4a, 0x4a7ec7, 0x58a86a, 0xd9a545, 0x9a6fc0, 0x50a8b8, 0xd97b9d, 0x8a8f98,
       0xead080, 0x6a8fd0,
     ];
     const color = new Color();
-    for (let i = 0; i < MAX_NPCS; i++) {
-      color.setHex(palette[Math.floor(this.rng() * palette.length)] ?? 0x8a8f98);
-      this.bodies.setColorAt(i, color);
+
+    // Build guests in groups of 1-4 spawned around a shared waypoint.
+    let i = 0;
+    while (i < MAX_NPCS) {
+      const groupSize = Math.min(1 + Math.floor(this.rng() * 4), MAX_NPCS - i);
       const wp = this.waypoints[Math.floor(this.rng() * this.waypoints.length)] ?? [0, 150];
-      const npc: Npc = {
-        x: wp[0] + (this.rng() - 0.5) * 4,
-        z: wp[1] + (this.rng() - 0.5) * 4,
-        tx: wp[0],
-        tz: wp[1],
-        speed: 0.7 + this.rng() * 0.8,
-        phase: this.rng() * Math.PI * 2,
-      };
-      this.retarget(npc);
-      this.npcs.push(npc);
+      const leaderIndex = i;
+      const groupSpeed = 0.7 + this.rng() * 0.8;
+      for (let m = 0; m < groupSize; m++) {
+        const isLeader = m === 0;
+        const ox = isLeader ? 0 : (this.rng() - 0.5) * 2.6;
+        const oz = isLeader ? 0 : (this.rng() - 0.5) * 2.6;
+        const npc: Npc = {
+          x: wp[0] + ox + (this.rng() - 0.5) * 2,
+          z: wp[1] + oz + (this.rng() - 0.5) * 2,
+          tx: wp[0] + ox,
+          tz: wp[1] + oz,
+          speed: groupSpeed * (isLeader ? 1 : 1.05), // followers keep up
+          phase: this.rng() * Math.PI * 2,
+          scale: this.pickScale(),
+          leader: isLeader ? -1 : leaderIndex,
+          ox,
+          oz,
+        };
+        color.setHex(palette[Math.floor(this.rng() * palette.length)] ?? 0x8a8f98);
+        this.bodies.setColorAt(i, color);
+        if (this.rng() < EARS_RATE && this.earOwners.length < this.ears.count) {
+          this.earOwners.push(i);
+        }
+        this.npcs.push(npc);
+        i += 1;
+      }
+      const leaderNpc = this.npcs[leaderIndex];
+      if (leaderNpc) this.retarget(leaderNpc);
     }
     if (this.bodies.instanceColor) this.bodies.instanceColor.needsUpdate = true;
 
     this.bodies.castShadow = true;
-    scene.add(this.bodies, this.heads);
+    scene.add(this.bodies, this.heads, this.ears);
     this.setCount(0);
   }
 
@@ -90,33 +136,76 @@ export class CrowdSystem {
     const q = new Quaternion();
     const up = new Vector3(0, 1, 0);
     const pos = new Vector3();
-    const one = new Vector3(1, 1, 1);
+    const scl = new Vector3();
 
     for (let i = 0; i < this.active; i++) {
       const npc = this.npcs[i];
       if (!npc) continue;
+
+      // Followers glue their target to the leader's position + offset.
+      if (npc.leader >= 0) {
+        const leader = this.npcs[npc.leader];
+        if (leader) {
+          npc.tx = leader.x + npc.ox;
+          npc.tz = leader.z + npc.oz;
+        }
+      }
+
       const dx = npc.tx - npc.x;
       const dz = npc.tz - npc.z;
       const dist = Math.hypot(dx, dz);
       if (dist < 1.2) {
-        this.retarget(npc);
+        if (npc.leader < 0) this.retarget(npc);
       } else {
         npc.x += (dx / dist) * npc.speed * dt;
         npc.z += (dz / dist) * npc.speed * dt;
       }
 
-      const bob = Math.sin(this.time * 7 + npc.phase) * 0.045;
+      const s = npc.scale;
+      const bob = Math.sin(this.time * 7 + npc.phase) * 0.045 * s;
       const yaw = Math.atan2(dx, dz);
       q.setFromAxisAngle(up, yaw);
-      pos.set(npc.x, 0.9 + bob, npc.z);
-      m.compose(pos, q, one);
+      scl.setScalar(s);
+      pos.set(npc.x, 0.9 * s + bob, npc.z);
+      m.compose(pos, q, scl);
       this.bodies.setMatrixAt(i, m);
-      pos.set(npc.x, 1.72 + bob, npc.z);
-      m.compose(pos, q, one);
+      pos.set(npc.x, 1.72 * s + bob, npc.z);
+      m.compose(pos, q, scl);
       this.heads.setMatrixAt(i, m);
     }
     this.bodies.instanceMatrix.needsUpdate = true;
     this.heads.instanceMatrix.needsUpdate = true;
+
+    // Ears ride on their owners' heads; hide slots whose owner is inactive.
+    for (let e = 0; e < this.earOwners.length; e++) {
+      const owner = this.earOwners[e];
+      const npc = owner !== undefined ? this.npcs[owner] : undefined;
+      if (owner === undefined || npc === undefined || owner >= this.active) {
+        m.makeScale(0, 0, 0);
+        this.ears.setMatrixAt(e, m);
+        continue;
+      }
+      const s = npc.scale;
+      const bob = Math.sin(this.time * 7 + npc.phase) * 0.045 * s;
+      const yaw = Math.atan2(npc.tx - npc.x, npc.tz - npc.z);
+      q.setFromAxisAngle(up, yaw);
+      scl.setScalar(s);
+      pos.set(npc.x, 1.82 * s + bob, npc.z);
+      m.compose(pos, q, scl);
+      this.ears.setMatrixAt(e, m);
+    }
+    this.ears.count = this.earOwners.length;
+    this.ears.instanceMatrix.needsUpdate = true;
+  }
+
+  private pickScale(): number {
+    const roll = this.rng();
+    let acc = 0;
+    for (const [scale, weight] of SIZES) {
+      acc += weight;
+      if (roll < acc) return scale + (this.rng() - 0.5) * 0.08;
+    }
+    return 1.0;
   }
 
   private retarget(npc: Npc): void {

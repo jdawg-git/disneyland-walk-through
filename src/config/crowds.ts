@@ -98,4 +98,4 @@ export const TIME_OF_DAY_CURVE: readonly number[] = [
 ];
 
 /** Hard cap on rendered NPCs (level 10, midday). */
-export const MAX_NPCS = 1500;
+export const MAX_NPCS = 2400;

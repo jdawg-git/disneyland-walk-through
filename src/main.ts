@@ -63,7 +63,7 @@ function boot(p: AppParams): void {
   // Crowd simulation: a typical average day, always. The historical-date
   // model still backs the ?date=YYYY-MM-DD&hour=H dev params (used by the
   // verify harness), but there is no in-game date picker.
-  const AVERAGE_LEVEL = 5;
+  const AVERAGE_LEVEL = 6;
   const crowd = new CrowdSystem(scene, p.seed);
   const forecast = p.date
     ? crowdForecast(p.date)

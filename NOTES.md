@@ -143,3 +143,20 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - Date picker removed from the HUD — crowds are always a typical day
   (AVERAGE_LEVEL = 5 in main.ts). The crowd model + ?date/?hour dev params
   remain for the verify harness.
+
+## Third playtest fixes (2026-07-10 night)
+
+- "Stuck near Space Mountain" root cause: bespoke landmarks kept their OSM
+  FOOTPRINTS for collision — Space Mountain's includes the whole show
+  building (r 37-65 m) vs the ~32 m visible dome = invisible walls. All
+  bespoke landmarks now use visual-matched colliders (circles/boxes in
+  walkable.ts) instead of footprints; applied after path carving so queue
+  walkways can't tunnel through mountains. Castle gate gap + station
+  entrance tunnels are part of the shapes.
+- Scavenger v2: ALL uncollected stars exist at once; collect in any order.
+  The clue suggests the next uncollected id after the last one found,
+  wrapping. localStorage schema v2 {ids, last} with legacy count migration.
+- Crowd v2: guests travel in groups of 1-4 (followers track their leader),
+  three sizes (adult/teen/child at 60/20/20), 1-in-10 wears Mickey ears
+  (instanced merged-sphere geometry riding the head). MAX_NPCS 2400,
+  average level 6.

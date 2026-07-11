@@ -13,10 +13,11 @@ import {
   Vector3,
 } from "three";
 import { registerEmissive } from "../engine/emissive";
-import { STARS } from "../config/scavenger";
+import { STARS, type StarDef } from "../config/scavenger";
 import { Emitter } from "./events";
 
-const STORAGE_KEY = "dlv-scavenger-progress";
+const STORAGE_KEY = "dlv-scavenger-progress-v2";
+const LEGACY_KEY = "dlv-scavenger-progress";
 const COLLECT_RADIUS = 2.2;
 
 // Fireworks celebration over the castle when the hunt completes.
@@ -32,21 +33,29 @@ interface Burst {
   life: number;
 }
 
+interface Progress {
+  readonly ids: readonly number[];
+  readonly last: number;
+}
+
 interface ScavengerEvents extends Record<string, unknown> {
   progress: { collected: number; total: number; clue: string | null; complete: boolean };
 }
 
 /**
- * Sequential golden-star hunt. Only the current target star exists in the
- * world; collecting it plays a synthesized chime + sparkle burst, advances
- * the sequence, and persists to localStorage.
+ * Free-order golden-star hunt: ALL uncollected stars exist in the world and
+ * any can be collected at any time. The HUD clue is a suggestion — it points
+ * at the next uncollected star in numerical order after the one you most
+ * recently found (wrapping around). Progress persists to localStorage.
  */
 export class ScavengerSystem {
   readonly events = new Emitter<ScavengerEvents>();
 
   private readonly scene: Scene;
-  private collected: number;
-  private star: Mesh | null = null;
+  private readonly stars = new Map<number, Mesh>();
+  private readonly starMaterial: MeshStandardMaterial;
+  private collected: Set<number>;
+  private last = 0;
   private sparkles: { points: Points; life: number } | null = null;
   private time = 0;
   private celebration = 0; // seconds remaining
@@ -55,39 +64,59 @@ export class ScavengerSystem {
 
   constructor(scene: Scene) {
     this.scene = scene;
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = raw !== null ? Number.parseInt(raw, 10) : 0;
-    this.collected = Number.isFinite(parsed) ? Math.max(0, Math.min(parsed, STARS.length)) : 0;
-    this.spawnCurrent();
+
+    const progress = loadProgress();
+    this.collected = new Set(progress.ids.filter((id) => STARS.some((s) => s.id === id)));
+    this.last = progress.last;
+
+    this.starMaterial = new MeshStandardMaterial({
+      color: 0x8a6a20,
+      emissive: new Color(0xffd24a),
+      emissiveIntensity: 0.9,
+      roughness: 0.3,
+      metalness: 0.55,
+    });
+    registerEmissive(this.starMaterial, 2.6, 0.9);
+
+    for (const def of STARS) {
+      if (!this.collected.has(def.id)) this.spawnStar(def);
+    }
   }
 
   get state(): { collected: number; total: number; clue: string | null; complete: boolean } {
-    const next = STARS[this.collected];
+    const next = this.nextSuggested();
     return {
-      collected: this.collected,
+      collected: this.collected.size,
       total: STARS.length,
       clue: next ? next.clue : null,
-      complete: this.collected >= STARS.length,
+      complete: this.collected.size >= STARS.length,
     };
   }
 
   reset(): void {
-    this.collected = 0;
-    window.localStorage.setItem(STORAGE_KEY, "0");
-    this.spawnCurrent();
+    this.collected = new Set();
+    this.last = 0;
+    this.persist();
+    for (const def of STARS) {
+      if (!this.stars.has(def.id)) this.spawnStar(def);
+    }
     this.events.emit("progress", this.state);
   }
 
   update(dt: number, playerPosition: Vector3): void {
     this.time += dt;
-    if (this.star) {
-      this.star.rotation.y += dt * 1.6;
-      const base = this.star.userData["baseY"] as number;
-      this.star.position.y = base + Math.sin(this.time * 2.2) * 0.18;
-
-      const d = playerPosition.distanceTo(this.star.position);
-      if (d < COLLECT_RADIUS) this.collect();
+    let collectedId: number | null = null;
+    for (const [id, mesh] of this.stars) {
+      mesh.rotation.y += dt * 1.6;
+      const base = mesh.userData["baseY"] as number;
+      const phase = mesh.userData["phase"] as number;
+      mesh.position.y = base + Math.sin(this.time * 2.2 + phase) * 0.18;
+      if (collectedId === null && playerPosition.distanceTo(mesh.position) < COLLECT_RADIUS) {
+        collectedId = id;
+      }
     }
+    if (collectedId !== null) this.collect(collectedId);
+
     if (this.sparkles) {
       this.sparkles.life -= dt;
       const material = this.sparkles.points.material as PointsMaterial;
@@ -99,6 +128,49 @@ export class ScavengerSystem {
       }
     }
     this.updateFireworks(dt);
+  }
+
+  /** Next uncollected star in numerical order after `last`, wrapping. */
+  private nextSuggested(): StarDef | null {
+    if (this.collected.size >= STARS.length) return null;
+    const remaining = STARS.filter((s) => !this.collected.has(s.id)).sort((a, b) => a.id - b.id);
+    return remaining.find((s) => s.id > this.last) ?? remaining[0] ?? null;
+  }
+
+  private collect(id: number): void {
+    const mesh = this.stars.get(id);
+    if (!mesh) return;
+    const at = mesh.position.clone();
+    this.scene.remove(mesh);
+    this.stars.delete(id);
+
+    this.collected.add(id);
+    this.last = id;
+    this.persist();
+    this.burstSparkles(at);
+    playChime();
+    if (this.collected.size >= STARS.length) {
+      this.celebration = CELEBRATION_SECONDS;
+      this.nextBurst = 0;
+    }
+    this.events.emit("progress", this.state);
+  }
+
+  private spawnStar(def: StarDef): void {
+    const mesh = new Mesh(starGeometry(), this.starMaterial);
+    mesh.position.set(def.position[0], def.position[1], def.position[2]);
+    mesh.userData["baseY"] = def.position[1];
+    mesh.userData["phase"] = def.id * 0.7;
+    mesh.castShadow = true;
+    this.stars.set(def.id, mesh);
+    this.scene.add(mesh);
+  }
+
+  private persist(): void {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ids: [...this.collected], last: this.last }),
+    );
   }
 
   private updateFireworks(dt: number): void {
@@ -172,48 +244,6 @@ export class ScavengerSystem {
     this.bursts.push({ points, velocities, life: 2.4 });
   }
 
-  private collect(): void {
-    if (!this.star) return;
-    const at = this.star.position.clone();
-    this.scene.remove(this.star);
-    this.star = null;
-
-    this.collected = Math.min(this.collected + 1, STARS.length);
-    window.localStorage.setItem(STORAGE_KEY, String(this.collected));
-    this.burstSparkles(at);
-    playChime();
-    this.spawnCurrent();
-    if (this.collected >= STARS.length) {
-      this.celebration = CELEBRATION_SECONDS;
-      this.nextBurst = 0;
-    }
-    this.events.emit("progress", this.state);
-  }
-
-  private spawnCurrent(): void {
-    if (this.star) {
-      this.scene.remove(this.star);
-      this.star = null;
-    }
-    const def = STARS[this.collected];
-    if (!def) return;
-
-    const material = new MeshStandardMaterial({
-      color: 0x8a6a20,
-      emissive: new Color(0xffd24a),
-      emissiveIntensity: 0.9,
-      roughness: 0.3,
-      metalness: 0.55,
-    });
-    registerEmissive(material, 2.6, 0.9);
-    const mesh = new Mesh(starGeometry(), material);
-    mesh.position.set(def.position[0], def.position[1], def.position[2]);
-    mesh.userData["baseY"] = def.position[1];
-    mesh.castShadow = true;
-    this.star = mesh;
-    this.scene.add(mesh);
-  }
-
   private burstSparkles(at: Vector3): void {
     const count = 60;
     const positions = new Float32Array(count * 3);
@@ -240,6 +270,34 @@ export class ScavengerSystem {
     this.scene.add(points);
     this.sparkles = { points, life: 1.4 };
   }
+}
+
+/** Load v2 progress; migrate legacy count-based progress (v1) if present. */
+function loadProgress(): Progress {
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (raw !== null) {
+    try {
+      const parsed = JSON.parse(raw) as { ids?: unknown; last?: unknown };
+      if (Array.isArray(parsed.ids)) {
+        return {
+          ids: parsed.ids.filter((n): n is number => typeof n === "number"),
+          last: typeof parsed.last === "number" ? parsed.last : 0,
+        };
+      }
+    } catch {
+      // fall through to defaults
+    }
+  }
+  const legacy = window.localStorage.getItem(LEGACY_KEY);
+  if (legacy !== null) {
+    const count = Number.parseInt(legacy, 10);
+    window.localStorage.removeItem(LEGACY_KEY);
+    if (Number.isFinite(count) && count > 0) {
+      const ids = STARS.slice(0, count).map((s) => s.id);
+      return { ids, last: ids[ids.length - 1] ?? 0 };
+    }
+  }
+  return { ids: [], last: 0 };
 }
 
 /** Flat 5-point star, extruded. */

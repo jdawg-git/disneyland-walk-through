@@ -1,12 +1,53 @@
 import { Vector3 } from "three";
+import { LANDMARKS } from "../config/landmarks";
 import { PARK_LAYOUT, pointInPolygon, type Pt } from "../data/parkLayout";
 
 const CELL = 0.5; // meters per grid cell
 const PLAYER_RADIUS_CELLS = 1; // obstacle dilation ≈ 0.5 m
 const PATH_HALF_WIDTH = 2.0; // carved walkway ribbon half-width (m)
 
-/** The castle mesh has a real gate opening — its footprint stays carved. */
-const WALKTHROUGH_BUILDING_IDS: ReadonlySet<number> = new Set([331440228]);
+/**
+ * Bespoke landmarks do NOT use their OSM footprints for collision — those
+ * include huge invisible show buildings (Space Mountain's is r 37-65 m vs a
+ * ~32 m visible dome), and walking into an invisible wall reads as "stuck".
+ * Instead each landmark blocks a shape matching its VISIBLE mesh (small
+ * margin included). Applied after path carving, so queue walkways can't
+ * tunnel through the mountains; gaps (castle gate, station tunnels) are
+ * part of the shapes themselves.
+ */
+const LANDMARK_FOOTPRINT_IDS: ReadonlySet<number> = new Set(
+  LANDMARKS.flatMap((l) => [...l.osmIds]),
+);
+
+interface CircleCollider { readonly kind: "circle"; readonly x: number; readonly z: number; readonly r: number; }
+interface BoxCollider { readonly kind: "box"; readonly x: number; readonly z: number; readonly halfW: number; readonly halfD: number; }
+type LandmarkCollider = CircleCollider | BoxCollider;
+
+const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
+  // Castle: two blocks flanking the 5 m walk-through corridor (x 3.2..8.4).
+  { kind: "box", x: -3.55, z: -10.5, halfW: 6.75, halfD: 11.5 },
+  { kind: "box", x: 15.15, z: -10.5, halfW: 6.75, halfD: 11.5 },
+  // Main Street Station mound (entrance tunnels stay open on both sides).
+  { kind: "box", x: 2.6, z: 300.2, halfW: 15, halfD: 7.5 },
+  // Space Mountain dome + concourse.
+  { kind: "circle", x: 151, z: 162, r: 33.5 },
+  // Matterhorn.
+  { kind: "circle", x: 109, z: -38.8, r: 29.5 },
+  // Big Thunder buttes (one circle per butte).
+  { kind: "circle", x: -124.2, z: 3.8, r: 21 },
+  { kind: "circle", x: -142.2, z: 15.8, r: 14 },
+  { kind: "circle", x: -110.2, z: -10.2, r: 16 },
+  { kind: "circle", x: -106.2, z: 13.8, r: 10 },
+  { kind: "circle", x: -136.2, z: -14.2, r: 10 },
+  // it's a small world facade (route to Toontown passes west of it).
+  { kind: "box", x: 114.3, z: -247.7, halfW: 51, halfD: 4 },
+  // Pirates facade + wings.
+  { kind: "box", x: -200.2, z: 190.5, halfW: 26, halfD: 7.5 },
+  // Haunted Mansion.
+  { kind: "box", x: -301.8, z: 120.2, halfW: 12, halfD: 9.5 },
+  // Enchanted Tiki Room.
+  { kind: "box", x: -53.2, z: 114.3, halfW: 15.5, halfD: 8.5 },
+];
 
 /**
  * Baked 2D walkable bitmap. Rasterization order matters:
@@ -50,8 +91,12 @@ export class WalkableGrid {
 
     // 1. Boundary interior is walkable (lawns included).
     this.fillPolygon(boundary, 1);
-    // 2. Obstacles: water + buildings only, dilated by player radius.
-    for (const b of PARK_LAYOUT.buildings) this.fillPolygon(b.outer, 0);
+    // 2. Obstacles: water + generic buildings (landmark footprints excluded
+    //    — they get visual-matched colliders in step 5), dilated.
+    for (const b of PARK_LAYOUT.buildings) {
+      if (LANDMARK_FOOTPRINT_IDS.has(b.id)) continue;
+      this.fillPolygon(b.outer, 0);
+    }
     for (const w of PARK_LAYOUT.water) this.fillPolygon(w.outer, 0);
     this.dilateBlocked(PLAYER_RADIUS_CELLS);
     // 3. Carve real walkways at full width — bridges + castle corridor.
@@ -59,10 +104,15 @@ export class WalkableGrid {
       if (path.kind !== "footway" && path.kind !== "pedestrian" && path.kind !== "steps") continue;
       this.carvePolyline(path.points, PATH_HALF_WIDTH);
     }
-    // 4. Buildings win over ribbons — except walk-through landmarks.
+    // 4. Generic buildings win over ribbons.
     for (const b of PARK_LAYOUT.buildings) {
-      if (WALKTHROUGH_BUILDING_IDS.has(b.id)) continue;
+      if (LANDMARK_FOOTPRINT_IDS.has(b.id)) continue;
       this.fillPolygon(b.outer, 0);
+    }
+    // 5. Landmark colliders — solid, match the visible meshes.
+    for (const c of LANDMARK_COLLIDERS) {
+      if (c.kind === "circle") this.fillCircle(c.x, c.z, c.r);
+      else this.fillBox(c.x, c.z, c.halfW, c.halfD);
     }
   }
 
@@ -141,6 +191,32 @@ export class WalkableGrid {
       for (let c = c0; c <= c1; c++) {
         const x = this.minX + (c + 0.5) * CELL;
         if (pointInPolygon(x, z, poly)) this.grid[r * this.cols + c] = value;
+      }
+    }
+  }
+
+  private fillCircle(x: number, z: number, r: number): void {
+    const c0 = Math.max(0, Math.floor((x - r - this.minX) / CELL));
+    const c1 = Math.min(this.cols - 1, Math.ceil((x + r - this.minX) / CELL));
+    const r0 = Math.max(0, Math.floor((z - r - this.minZ) / CELL));
+    const r1 = Math.min(this.rows - 1, Math.ceil((z + r - this.minZ) / CELL));
+    for (let row = r0; row <= r1; row++) {
+      const cz = this.minZ + (row + 0.5) * CELL;
+      for (let col = c0; col <= c1; col++) {
+        const cx = this.minX + (col + 0.5) * CELL;
+        if (Math.hypot(cx - x, cz - z) <= r) this.grid[row * this.cols + col] = 0;
+      }
+    }
+  }
+
+  private fillBox(x: number, z: number, halfW: number, halfD: number): void {
+    const c0 = Math.max(0, Math.floor((x - halfW - this.minX) / CELL));
+    const c1 = Math.min(this.cols - 1, Math.ceil((x + halfW - this.minX) / CELL));
+    const r0 = Math.max(0, Math.floor((z - halfD - this.minZ) / CELL));
+    const r1 = Math.min(this.rows - 1, Math.ceil((z + halfD - this.minZ) / CELL));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        this.grid[row * this.cols + col] = 0;
       }
     }
   }
