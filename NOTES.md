@@ -122,3 +122,15 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - Connectivity is now unit-tested: BFS flood-fill from spawn must reach all
   12 stars.
 - Walk 4.5 m/s, run (hold Shift) 10 m/s.
+
+## Collision loosening (2026-07-10, second playtest)
+
+- Greens/planters no longer block — lawns are walkable everywhere (gameplay
+  beats horticultural realism).
+- Grid order changed: obstacles dilate BEFORE path ribbons carve, so
+  walkways keep full width instead of being nibbled into dead-end pockets
+  (the "stuck near Space Mountain" bug). Ribbons widened to 4 m.
+- resolve() escape hatch: standing in a blocked cell allows free movement —
+  being permanently stuck is now impossible by construction.
+- Regression tests: lawns walkable + ≥80% of the walkway network reachable
+  from spawn (84% at time of writing).

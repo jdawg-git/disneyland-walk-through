@@ -3,21 +3,25 @@ import { PARK_LAYOUT, pointInPolygon, type Pt } from "../data/parkLayout";
 
 const CELL = 0.5; // meters per grid cell
 const PLAYER_RADIUS_CELLS = 1; // obstacle dilation ≈ 0.5 m
-const PATH_HALF_WIDTH = 1.4; // carved walkway ribbon half-width (m)
+const PATH_HALF_WIDTH = 2.0; // carved walkway ribbon half-width (m)
 
 /** The castle mesh has a real gate opening — its footprint stays carved. */
 const WALKTHROUGH_BUILDING_IDS: ReadonlySet<number> = new Set([331440228]);
 
 /**
  * Baked 2D walkable bitmap. Rasterization order matters:
- *   1. park boundary  → walkable
- *   2. water + greens + buildings → blocked
- *   3. real OSM footway/pedestrian polylines → carved walkable ribbons
- *      (this is what restores bridges over water and the castle corridor)
- *   4. generic buildings re-blocked (walk-through landmarks excluded) so
- *      the ribbons can't tunnel through shops
- * then obstacles dilate by the player radius so runtime collision is a
- * single point lookup. Movement resolves with axis-separated sliding.
+ *   1. park boundary  → walkable  (grass/planters do NOT block — walk the
+ *      lawns freely; only water and buildings are obstacles)
+ *   2. water + buildings → blocked, then dilated by the player radius
+ *   3. real OSM footway/pedestrian polylines → carved walkable ribbons at
+ *      FULL width (carving after dilation keeps walkways from being nibbled
+ *      into dead-end pockets — this is what restores bridges over water and
+ *      the castle corridor)
+ *   4. generic buildings re-blocked, undilated (walk-through landmarks
+ *      excluded) so the ribbons can't tunnel through shops
+ * Movement resolves with axis-separated sliding, with an escape hatch: if
+ * the player is ever inside a blocked cell, movement is unrestricted until
+ * they're back on walkable ground — you can never be permanently stuck.
  */
 export class WalkableGrid {
   private readonly grid: Uint8Array;
@@ -44,13 +48,13 @@ export class WalkableGrid {
     this.rows = Math.ceil((maxZ - minZ + 8) / CELL);
     this.grid = new Uint8Array(this.cols * this.rows); // 0 = blocked, 1 = walkable
 
-    // 1. Boundary interior is walkable.
+    // 1. Boundary interior is walkable (lawns included).
     this.fillPolygon(boundary, 1);
-    // 2. Obstacles.
+    // 2. Obstacles: water + buildings only, dilated by player radius.
     for (const b of PARK_LAYOUT.buildings) this.fillPolygon(b.outer, 0);
     for (const w of PARK_LAYOUT.water) this.fillPolygon(w.outer, 0);
-    for (const g of PARK_LAYOUT.greens) this.fillPolygon(g.outer, 0);
-    // 3. Carve real walkways back in — bridges + castle corridor.
+    this.dilateBlocked(PLAYER_RADIUS_CELLS);
+    // 3. Carve real walkways at full width — bridges + castle corridor.
     for (const path of PARK_LAYOUT.paths) {
       if (path.kind !== "footway" && path.kind !== "pedestrian" && path.kind !== "steps") continue;
       this.carvePolyline(path.points, PATH_HALF_WIDTH);
@@ -60,8 +64,6 @@ export class WalkableGrid {
       if (WALKTHROUGH_BUILDING_IDS.has(b.id)) continue;
       this.fillPolygon(b.outer, 0);
     }
-
-    this.dilateBlocked(PLAYER_RADIUS_CELLS);
   }
 
   isWalkable(x: number, z: number): boolean {
@@ -73,6 +75,10 @@ export class WalkableGrid {
 
   /** Axis-separated slide: full move, then X-only, then Z-only, else stay. */
   resolve(from: Vector3, to: Vector3): Vector3 {
+    // Escape hatch: if the player is somehow inside a blocked cell (grid
+    // pocket, config edit, teleport), let them move freely until they reach
+    // walkable ground — never freeze in place.
+    if (!this.isWalkable(from.x, from.z)) return to;
     if (this.isWalkable(to.x, to.z)) return to;
     if (this.isWalkable(to.x, from.z)) return new Vector3(to.x, to.y, from.z);
     if (this.isWalkable(from.x, to.z)) return new Vector3(from.x, to.y, to.z);

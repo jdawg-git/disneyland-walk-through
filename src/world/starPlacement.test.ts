@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STARS } from "../config/scavenger";
 import { landAt } from "../config/lands";
+import { PARK_LAYOUT } from "../data/parkLayout";
 import { WalkableGrid } from "./walkable";
 
 describe("scavenger star placement", () => {
@@ -42,5 +43,26 @@ describe("scavenger star placement", () => {
     const reachable = grid.reachableFrom(5.8, 20); // south of the castle gate
     // Just north of the castle, in the Fantasyland courtyard.
     expect(reachable(5.8, -40)).toBe(true);
+  });
+
+  it("lawns are walkable (grass does not block)", () => {
+    expect(grid.isWalkable(1, 55), "hub garden").toBe(true);
+    expect(grid.isWalkable(-30, 290), "Town Square lawn").toBe(true);
+  });
+
+  it("most of the walkway network is reachable from spawn (no stuck pockets)", () => {
+    const reachable = grid.reachableFrom(2, 285);
+    let total = 0;
+    let ok = 0;
+    for (const path of PARK_LAYOUT.paths) {
+      if (path.kind !== "footway" && path.kind !== "pedestrian") continue;
+      for (const p of path.points) {
+        if (!landAt(p[0], p[1])) continue;
+        total += 1;
+        if (reachable(p[0], p[1])) ok += 1;
+      }
+    }
+    // 84% at time of writing; guards against collision regressions.
+    expect(ok / total).toBeGreaterThan(0.8);
   });
 });
