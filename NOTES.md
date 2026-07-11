@@ -81,7 +81,7 @@ Running log of how this project is built and why. Newest decisions at the bottom
 
 ## Stage 7 — guide notes
 
-- Guide = Gemini `gemini-2.5-flash` via REST, key from VITE_GEMINI_API_KEY
+- Guide = Gemini `gemini-3-flash-preview` via REST, key from VITE_GEMINI_API_KEY
   (client-side by design for local personal use; move behind a proxy if ever
   deployed publicly).
 - Every ask() rebuilds the system instruction with a live spatial snapshot
