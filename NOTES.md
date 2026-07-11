@@ -193,3 +193,18 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - Big Thunder v2: terraced hoodoo buttes (triangle-wave terracing + fbm),
   strata bands as vertex colors, timber headframe + trestle props.
 - Perf after Pass 1: 682 calls / 475k tris worst frame (budget 1200).
+
+## v2 Pass 2 — facades & new builds
+
+- Small World v2: geometric skyline parapet (boxes/cylinders/cones with gold
+  tips), central tower with a WORKING clock (60x park time via updatables),
+  topiary row. Night glow via the standard floodlight pattern.
+- Haunted Mansion v2: brick manor, 6-column portico + capitals +
+  entablature + balustrade, cupola, dormers, iron ridge crest, green ghost
+  windows.
+- Pirates v2: true double gallery — extruded walls with round-arch holes,
+  iron-lace balusters, dormered mansard, hanging lanterns.
+- NEW Splash Mountain at (-360, -15) (no OSM footprint): mossy noise buttes
+  with earth-to-green strata, log-flume chute hugging the drop face into a
+  splash pool, stump crown. Colliders added; star 7 reachability verified.
+- Tiki: carved totem stacks; Station: white gingerbread trim bands.

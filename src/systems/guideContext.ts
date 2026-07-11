@@ -27,6 +27,7 @@ const LANDMARK_NAMES: Record<string, string> = {
   hauntedMansion: "the Haunted Mansion",
   bigThunder: "Big Thunder Mountain",
   smallWorld: "it's a small world",
+  splashMountain: "Splash Mountain",
 };
 
 function buildPoiTable(): PoiEntry[] {

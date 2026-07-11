@@ -14,7 +14,8 @@ export type LandmarkKey =
   | "piratesFacade"
   | "hauntedMansion"
   | "bigThunder"
-  | "smallWorld";
+  | "smallWorld"
+  | "splashMountain";
 
 export interface LandmarkDef {
   readonly key: LandmarkKey;
@@ -33,4 +34,7 @@ export const LANDMARKS: readonly LandmarkDef[] = [
   { key: "hauntedMansion", osmIds: [178254960], position: [-301.8, 120.2] },
   { key: "bigThunder", osmIds: [266074156], position: [-124.2, 3.8] },
   { key: "smallWorld", osmIds: [499783300], position: [114.3, -247.7] },
+  // Purely additive — no OSM footprint; sited in Critter Country clear of
+  // star 7 at (-370, 40).
+  { key: "splashMountain", osmIds: [], position: [-360, -15] },
 ];

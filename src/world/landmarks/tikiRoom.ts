@@ -65,6 +65,26 @@ export function buildTikiRoom(scene: Scene, x: number, z: number): void {
     tiki.add(fire);
   }
 
+  // Carved tiki totems flanking the entrance: stacked flat-shaded heads.
+  const totemMaterial = new MeshStandardMaterial({ color: 0x5c4028, roughness: 1, flatShading: true });
+  for (const tx of [-9.5, 9.5]) {
+    const totem = new Group();
+    let ty = 0;
+    for (const [r, h] of [[0.75, 1.5], [0.62, 1.2], [0.5, 1.0]] as const) {
+      const head = new Mesh(new CylinderGeometry(r, r * 1.08, h, 7), totemMaterial);
+      head.position.y = ty + h / 2;
+      head.castShadow = true;
+      totem.add(head);
+      // Brow ledge gives each head a carved face suggestion.
+      const brow = new Mesh(new BoxGeometry(r * 1.7, 0.18, r * 0.9), totemMaterial);
+      brow.position.set(0, ty + h * 0.72, r * 0.62);
+      totem.add(brow);
+      ty += h;
+    }
+    totem.position.set(tx, 0, 7.6);
+    tiki.add(totem);
+  }
+
   tiki.position.set(x, 0, z);
   scene.add(tiki);
 }

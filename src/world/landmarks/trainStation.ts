@@ -94,6 +94,23 @@ export function buildTrainStation(scene: Scene, x: number, z: number): void {
     station.add(wingRoof);
   }
 
+  // Victorian gingerbread: white trim strips under every eave line.
+  const trim = new MeshStandardMaterial({ color: 0xfaf6ec, roughness: 0.8 });
+  for (const [w, y, d] of [
+    [24.4, BASE + 6, 9.4],
+    [19.4, BASE + 9, 7.4],
+    [4.0, BASE + 16, 4.0],
+  ] as const) {
+    const band = new Mesh(new BoxGeometry(w, 0.35, d), trim);
+    band.position.y = y;
+    station.add(band);
+  }
+  for (const side of [-1, 1]) {
+    const wingBand = new Mesh(new BoxGeometry(9.4, 0.3, 8.4), trim);
+    wingBand.position.set(side * 16, BASE + 4.5, 0);
+    station.add(wingBand);
+  }
+
   // Platform canopy toward the square + lit windows along the front.
   const canopy = new Mesh(new BoxGeometry(26, 0.3, 3), roof);
   canopy.position.set(0, BASE + 3.6, -6);

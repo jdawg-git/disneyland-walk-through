@@ -11,6 +11,7 @@ import { buildMatterhorn } from "./landmarks/matterhorn";
 import { buildPiratesFacade } from "./landmarks/piratesFacade";
 import { buildSmallWorld } from "./landmarks/smallWorld";
 import { buildSpaceMountain } from "./landmarks/spaceMountain";
+import { buildSplashMountain } from "./landmarks/splashMountain";
 import { buildTikiRoom } from "./landmarks/tikiRoom";
 import { buildTrainStation } from "./landmarks/trainStation";
 import { buildProps, type PropPlacements } from "./props";
@@ -27,6 +28,7 @@ const LANDMARK_BUILDERS: Record<LandmarkKey, (scene: Scene, x: number, z: number
   hauntedMansion: buildHauntedMansion,
   bigThunder: buildBigThunder,
   smallWorld: buildSmallWorld,
+  splashMountain: buildSplashMountain,
 };
 
 /** Which tree species each land grows. */

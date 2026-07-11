@@ -2,25 +2,37 @@ import {
   BoxGeometry,
   Color,
   ConeGeometry,
+  ExtrudeGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
+  Path,
   Scene,
+  Shape,
 } from "three";
 import { registerEmissive } from "../../engine/emissive";
 
 /**
- * Pirates of the Caribbean façade — New Orleans colonial mansion: cream
- * walls, dark mansard roofs, arched loggia along the front, warm lantern
- * glow at night. Faces north (−Z, toward the NOS promenade).
+ * Pirates of the Caribbean v2 — the New Orleans Square mansion with the
+ * signature DOUBLE GALLERY: two stacked rows of real arched openings
+ * (extruded walls with arch holes), iron-lace railings, a dormered mansard
+ * roof, and warm lantern glow. Faces north (−Z, toward the promenade).
+ *
+ * Collider contract: box halfW 26 × halfD 7.5 at (−200.2, 190.5).
  */
 export function buildPiratesFacade(scene: Scene, x: number, z: number): void {
   const g = new Group();
 
-  const cream = new MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9 });
-  const shutter = new MeshStandardMaterial({ color: 0x3c4a42, roughness: 0.85 });
+  const cream = new MeshStandardMaterial({
+    color: 0xe8dcc0,
+    roughness: 0.9,
+    emissive: new Color(0xffd8a8),
+    emissiveIntensity: 0,
+  });
+  registerEmissive(cream, 0.22);
   const mansard = new MeshStandardMaterial({ color: 0x3f3a46, roughness: 0.7 });
-  const arch = new MeshStandardMaterial({ color: 0x241e18, roughness: 1 });
+  const iron = new MeshStandardMaterial({ color: 0x232620, roughness: 0.6 });
+  const interior = new MeshStandardMaterial({ color: 0x1a1410, roughness: 1 });
 
   const lantern = new MeshStandardMaterial({
     color: 0x4a3a20,
@@ -30,49 +42,91 @@ export function buildPiratesFacade(scene: Scene, x: number, z: number): void {
   });
   registerEmissive(lantern, 2.8, 0.3);
 
-  // Main block.
-  const main = new Mesh(new BoxGeometry(30, 11, 14), cream);
-  main.position.y = 5.5;
-  main.castShadow = true;
-  main.receiveShadow = true;
-  g.add(main);
+  // Gallery wall builder: a wall slab pierced by a row of round arches.
+  const galleryWall = (width: number, height: number, arches: number): Mesh => {
+    const shape = new Shape();
+    shape.moveTo(-width / 2, 0);
+    shape.lineTo(width / 2, 0);
+    shape.lineTo(width / 2, height);
+    shape.lineTo(-width / 2, height);
+    shape.closePath();
+    const pitch = width / arches;
+    for (let i = 0; i < arches; i++) {
+      const cx = -width / 2 + pitch * (i + 0.5);
+      const hw = pitch * 0.32;
+      const arch = new Path();
+      arch.moveTo(cx - hw, 0);
+      arch.lineTo(cx - hw, height * 0.52);
+      arch.absarc(cx, height * 0.52, hw, Math.PI, 0, true);
+      arch.lineTo(cx + hw, 0);
+      arch.closePath();
+      shape.holes.push(arch);
+    }
+    return new Mesh(new ExtrudeGeometry(shape, { depth: 0.7, bevelEnabled: false }), cream);
+  };
 
-  const roofGeo = new ConeGeometry(Math.SQRT2 * 0.5, 1, 4);
-  roofGeo.rotateY(Math.PI / 4);
-  const roof = new Mesh(roofGeo, mansard);
-  roof.scale.set(31, 5.5, 15);
-  roof.position.y = 11 + 2.75;
-  roof.castShadow = true;
-  g.add(roof);
+  // Dark interior box behind the galleries.
+  const core = new Mesh(new BoxGeometry(30, 11, 12), interior);
+  core.position.set(0, 5.5, 1.5);
+  g.add(core);
+
+  // Ground gallery + upper gallery on the north face.
+  const lower = galleryWall(30, 5.6, 7);
+  lower.position.set(0, 0, -7.2);
+  lower.castShadow = true;
+  lower.receiveShadow = true;
+  g.add(lower);
+  const upper = galleryWall(30, 4.6, 7);
+  upper.position.set(0, 5.6, -7.2);
+  upper.castShadow = true;
+  g.add(upper);
+
+  // Gallery floor slab + iron-lace railing along the upper gallery.
+  const slab = new Mesh(new BoxGeometry(30.4, 0.35, 1.6), cream);
+  slab.position.set(0, 5.6, -6.9);
+  g.add(slab);
+  for (let i = 0; i < 29; i++) {
+    const baluster = new Mesh(new BoxGeometry(0.09, 1.0, 0.09), iron);
+    baluster.position.set(-14 + i * 1.0, 6.3, -7.6);
+    g.add(baluster);
+  }
+  const handrail = new Mesh(new BoxGeometry(29.2, 0.14, 0.2), iron);
+  handrail.position.set(0, 6.85, -7.6);
+  g.add(handrail);
 
   // Flanking wings.
   for (const side of [-1, 1]) {
-    const wing = new Mesh(new BoxGeometry(10, 8, 12), cream);
-    wing.position.set(side * 20, 4, 1);
+    const wing = new Mesh(new BoxGeometry(11, 8.5, 11), cream);
+    wing.position.set(side * 20.5, 4.25, 0.5);
     wing.castShadow = true;
     g.add(wing);
-    const wingRoof = new Mesh(roofGeo.clone(), mansard);
-    wingRoof.scale.set(11, 4, 13);
-    wingRoof.position.set(side * 20, 8 + 2, 1);
+    const wingRoofGeo = new ConeGeometry(Math.SQRT2 * 0.5, 1, 4);
+    wingRoofGeo.rotateY(Math.PI / 4);
+    const wingRoof = new Mesh(wingRoofGeo, mansard);
+    wingRoof.scale.set(12, 4, 12);
+    wingRoof.position.set(side * 20.5, 8.5 + 2, 0.5);
     wingRoof.castShadow = true;
     g.add(wingRoof);
   }
 
-  // Arched loggia along the front face (−z).
-  for (let i = -3; i <= 3; i++) {
-    const opening = new Mesh(new BoxGeometry(2.4, 4.2, 0.5), arch);
-    opening.position.set(i * 3.8, 2.4, -7.1);
-    g.add(opening);
+  // Dormered mansard over the main block.
+  const roofGeo = new ConeGeometry(Math.SQRT2 * 0.5, 1, 4);
+  roofGeo.rotateY(Math.PI / 4);
+  const roof = new Mesh(roofGeo, mansard);
+  roof.scale.set(31, 5.5, 13.5);
+  roof.position.set(0, 10.2 + 2.75, 1.5);
+  roof.castShadow = true;
+  g.add(roof);
+  for (const dx of [-9, -3, 3, 9]) {
+    const dormer = new Mesh(new BoxGeometry(1.9, 1.8, 1.6), cream);
+    dormer.position.set(dx, 12, -4.1);
+    g.add(dormer);
   }
-  // Second-story shuttered windows + lanterns.
-  for (let i = -3; i <= 3; i++) {
-    const win = new Mesh(new BoxGeometry(1.5, 2.2, 0.25), shutter);
-    win.position.set(i * 3.8, 8, -7.1);
-    g.add(win);
-  }
-  for (const lx of [-13, 0, 13]) {
+
+  // Hanging lanterns along the lower gallery.
+  for (const lx of [-12, -4, 4, 12]) {
     const lamp = new Mesh(new BoxGeometry(0.5, 0.9, 0.5), lantern);
-    lamp.position.set(lx, 4.6, -7.4);
+    lamp.position.set(lx, 4.4, -7.9);
     g.add(lamp);
   }
 
