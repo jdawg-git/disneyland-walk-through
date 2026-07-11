@@ -90,7 +90,9 @@ export class AudioZoneSystem {
       if (this.loading.has(zone)) return;
       this.loading.add(zone);
       try {
-        const res = await fetch(AUDIO_ZONES[zone].file);
+        // no-cache: revalidate with the server so swapped-in MP3s are picked
+        // up without a hard reload (tracks load once per session anyway).
+        const res = await fetch(AUDIO_ZONES[zone].file, { cache: "no-cache" });
         if (!res.ok) return;
         const buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
         const gain = this.ctx.createGain();
