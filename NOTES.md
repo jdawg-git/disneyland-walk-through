@@ -283,3 +283,47 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - Debug: window.__PARK_SCENE__ exposes the scene for raycast probes (used
   to identify "floating slab" artifacts — they were correctly-placed
   awnings over unlit glass, not bugs).
+
+## v3 — True to the Guest Map + Fortnite-spirit look
+
+- GUEST-MAP CULL (the big one): the raw OSM bake included everything
+  physically in Anaheim — 624 buildings where the guest map shows ~110
+  named structures. scripts/filter-guest-map.ts (npm run filter:map) now
+  reduces park-layout.raw.json → park-layout.json: keep only features
+  inside the DLRR berm ring (stitched via src/data/railLoop.ts, shared
+  with the train; buffered 15 m; bowed out over the entrance forecourt,
+  Toontown, and Critter Country, which all sit BEYOND the tracks), plus a
+  backstage name cull (cast/plants/warehouses/show buildings — regex must
+  be \bcast(?!le) or it eats "Castle"!). Galaxy's Edge needed no carve-out:
+  the 2019 DLRR reroute skirts its south edge, so it falls outside the
+  ring naturally. 425/624 buildings, 74/175 rail segs kept; the emitted
+  `boundary` IS the guest ring, so terrain + walkable shrink to match.
+- Rail stitcher lesson: greedy chaining kept appending the roundhouse
+  yard spur AFTER the loop had closed (double-backs to z≈-375 corrupted
+  both boundary and train path) — the stitcher now trims at first return
+  to start. Data-integrity tests in src/data/guestMap.test.ts.
+- Land polygons re-traced to the filtered content (20-anchor spot check);
+  Critter Country renamed "Bayou Country" (LandId unchanged).
+- Landmarks matched to reference photos: Haunted Mansion is CREAM with a
+  four-column pediment portico + sage iron verandas (red was Florida's);
+  castle cobalt/pink/slate; Pirates pink stucco + blue-grey iron; Small
+  World brighter gold; Space Mountain whiter; Splash → TIANA'S BAYOU
+  ADVENTURE (lush green mossy mountain, mill + water wheel, "TIANA'S"
+  water tower with gold tiara) moved to its real OSM footprint (-348,68),
+  drop facing the river; colliders re-synced (group rotated +90°:
+  local (dx,dz) → world (x+dz, z−dx)).
+- Screening rework: the v2 interior "screen walls" read as flat green
+  slabs and their show buildings no longer exist — replaced by a
+  PERIMETER FOREST (3 ragged pine rows outside the boundary) dressing the
+  horizon the way the real berm treeline does. Lamps now stand at walkway
+  EDGES (alternating-side normal offset), olive posts + white opal globes.
+- Landmark gaze HUD: src/systems/landmarkGaze.ts (pure, unit-tested)
+  picks the most-centered POI within range + ~21° cone, with hysteresis
+  (wider stay-cone + steal margin); nameplate top-center in hud.ts;
+  17 POIs in src/config/landmarkInfo.ts; the guide's live context now
+  includes "player is looking at X".
+- Fortnite-spirit grade: HueSaturation(+0.17) + BrightnessContrast after
+  ACES; brighter saturated sky, warmer sun, hemi 1.25 so shadow sides stay
+  colorful; land palettes tuned pastel-forward because the grade pushes
+  them (full-sat walls went neon — feed the grade pastels).
+- Perf: worst frame 774 calls / 723k tris (budget 1200) at the overview.

@@ -1,10 +1,8 @@
 import {
-  BoxGeometry,
   ConeGeometry,
   CylinderGeometry,
   InstancedMesh,
   Matrix4,
-  Mesh,
   MeshStandardMaterial,
   Quaternion,
   Vector3,
@@ -22,7 +20,7 @@ import { buildMatterhorn } from "./landmarks/matterhorn";
 import { buildPiratesFacade } from "./landmarks/piratesFacade";
 import { buildSmallWorld } from "./landmarks/smallWorld";
 import { buildSpaceMountain } from "./landmarks/spaceMountain";
-import { buildSplashMountain } from "./landmarks/splashMountain";
+import { buildTianasBayou } from "./landmarks/tianas";
 import { buildTikiRoom } from "./landmarks/tikiRoom";
 import { buildTrainStation } from "./landmarks/trainStation";
 import { buildIsland } from "./island";
@@ -43,7 +41,7 @@ const LANDMARK_BUILDERS: Record<LandmarkKey, (scene: Scene, x: number, z: number
   hauntedMansion: buildHauntedMansion,
   bigThunder: buildBigThunder,
   smallWorld: buildSmallWorld,
-  splashMountain: buildSplashMountain,
+  tianasBayou: buildTianasBayou,
 };
 
 /** Which tree species each land grows. */
@@ -104,46 +102,48 @@ export function buildPark(scene: Scene, seed: number): void {
 }
 
 /**
- * Backstage screening: dense pine walls + long berm mounds along the sight
- * lines behind the big show buildings (the real park hides its warehouses
- * exactly this way). Purely visual — no collision.
+ * Perimeter forest: the real park is ringed by a dense treeline that hides
+ * the outside world — with the backstage lots culled from the data, the
+ * horizon beyond the boundary is bare earth, so three staggered pine rows
+ * just OUTSIDE the guest boundary dress every sightline at once. (The v2
+ * interior "screen walls" that read as flat green slabs are gone — the
+ * show buildings they hid no longer exist.) Purely visual — no collision.
  */
-const SCREEN_LINES: readonly (readonly [Pt, Pt])[] = [
-  [[-226, 201], [-174, 201]], // behind Pirates of the Caribbean
-  [[-320, 104], [-286, 104]], // behind the Haunted Mansion
-  [[66, -254], [162, -254]], // behind it's a small world
-  [[188, 118], [188, 205]], // east of Space Mountain
-];
-
 function buildScreening(scene: Scene, seed: number): void {
   const rng = mulberry32(seed + 900);
-  const moundMaterial = new MeshStandardMaterial({ color: 0x66905a, roughness: 1 });
   const trunkMaterial = new MeshStandardMaterial({ color: 0x4f3c2c, roughness: 1 });
-  const pineMaterial = new MeshStandardMaterial({ color: 0x3a6132, roughness: 1, flatShading: true });
+  const pineMaterial = new MeshStandardMaterial({ color: 0x4f8a48, roughness: 1, flatShading: true });
+
+  // Ring centroid for outward direction.
+  const ring = PARK_LAYOUT.boundary;
+  let cx = 0;
+  let cz = 0;
+  for (const p of ring) {
+    cx += p[0];
+    cz += p[1];
+  }
+  cx /= ring.length;
+  cz /= ring.length;
 
   const placements: { x: number; z: number; s: number }[] = [];
-  for (const [a, b] of SCREEN_LINES) {
-    const dx = b[0] - a[0];
-    const dz = b[1] - a[1];
-    const length = Math.hypot(dx, dz);
-    const yaw = Math.atan2(dx, dz);
-
-    const mound = new Mesh(new BoxGeometry(5, 2.4, length + 6), moundMaterial);
-    mound.position.set((a[0] + b[0]) / 2, 1.2, (a[1] + b[1]) / 2);
-    mound.rotation.y = yaw;
-    mound.receiveShadow = true;
-    scene.add(mound);
-
-    // Two staggered pine rows along the line.
-    const nx = dz / length;
-    const nz = -dx / length;
-    for (let d = 0; d <= length; d += 3) {
-      const t = d / length;
-      for (const row of [-1.8, 1.8]) {
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
+    if (!a || !b) continue;
+    const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    for (let d = 0; d < segLen; d += 7) {
+      const t = d / segLen;
+      const px = a[0] + (b[0] - a[0]) * t;
+      const pz = a[1] + (b[1] - a[1]) * t;
+      const ox = px - cx;
+      const oz = pz - cz;
+      const olen = Math.hypot(ox, oz) || 1;
+      for (const row of [10, 19, 29]) {
+        if (rng() < 0.25) continue; // ragged, natural spacing
         placements.push({
-          x: a[0] + dx * t + nx * row + (rng() - 0.5) * 1.4,
-          z: a[1] + dz * t + nz * row + (rng() - 0.5) * 1.4,
-          s: 1.4 + rng() * 0.8,
+          x: px + (ox / olen) * row + (rng() - 0.5) * 4,
+          z: pz + (oz / olen) * row + (rng() - 0.5) * 4,
+          s: 1.3 + rng() * 1.1,
         });
       }
     }
@@ -167,13 +167,15 @@ function buildScreening(scene: Scene, seed: number): void {
   placements.forEach((p, i) => {
     q.setFromAxisAngle(up, rng() * Math.PI * 2);
     scl.setScalar(p.s);
-    pos.set(p.x, 2.4 + 1.0 * p.s, p.z);
+    pos.set(p.x, 1.0 * p.s, p.z);
     m.compose(pos, q, scl);
     trunks.setMatrixAt(i, m);
-    pos.set(p.x, 2.4 + (2.0 + 2.4) * p.s, p.z);
+    pos.set(p.x, (2.0 + 2.4) * p.s, p.z);
     m.compose(pos, q, scl);
     crowns.setMatrixAt(i, m);
   });
+  trunks.instanceMatrix.needsUpdate = true;
+  crowns.instanceMatrix.needsUpdate = true;
   crowns.castShadow = true;
   scene.add(trunks, crowns);
 }
@@ -214,11 +216,17 @@ function generatePropPlacements(seed: number): PropPlacements {
       const b = path.points[i + 1];
       if (!a || !b) continue;
       const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      // Lamps stand at the walkway EDGE, not on the centerline — offset
+      // along the segment normal, alternating sides (footway ribbons are
+      // carved at half-width 2.0 m).
+      const nx = (b[1] - a[1]) / segLen;
+      const nz = -(b[0] - a[0]) / segLen;
       let d = 24 - sinceLast;
       while (d < segLen) {
         const t = d / segLen;
-        const x = a[0] + (b[0] - a[0]) * t;
-        const z = a[1] + (b[1] - a[1]) * t;
+        const side = lamps.length % 2 === 0 ? 1.8 : -1.8;
+        const x = a[0] + (b[0] - a[0]) * t + nx * side;
+        const z = a[1] + (b[1] - a[1]) * t + nz * side;
         const land = landAt(x, z);
         if (land && LAMP_LANDS.has(land.id) && rng() > 0.35) lamps.push([x, z]);
         d += 24;

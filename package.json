@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "fetch:osm": "tsx scripts/fetch-osm.ts",
+    "filter:map": "tsx scripts/filter-guest-map.ts",
     "gen:audio": "node scripts/gen-silent-audio.mjs",
     "verify": "node scripts/screenshot.mjs"
   },

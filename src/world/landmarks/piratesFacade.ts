@@ -24,14 +24,14 @@ export function buildPiratesFacade(scene: Scene, x: number, z: number): void {
   const g = new Group();
 
   const cream = new MeshStandardMaterial({
-    color: 0xe8dcc0,
+    color: 0xefd4c2,
     roughness: 0.9,
     emissive: new Color(0xffd8a8),
     emissiveIntensity: 0,
   });
   registerEmissive(cream, 0.22);
   const mansard = new MeshStandardMaterial({ color: 0x3f3a46, roughness: 0.7 });
-  const iron = new MeshStandardMaterial({ color: 0x232620, roughness: 0.6 });
+  const iron = new MeshStandardMaterial({ color: 0x51637a, roughness: 0.6 });
   const interior = new MeshStandardMaterial({ color: 0x1a1410, roughness: 1 });
 
   const lantern = new MeshStandardMaterial({

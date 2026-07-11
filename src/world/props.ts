@@ -41,28 +41,39 @@ export function buildProps(scene: Scene, placements: PropPlacements, seed: numbe
 
 function buildLamps(scene: Scene, lamps: readonly Pt[]): void {
   if (lamps.length === 0) return;
-  const postMaterial = new MeshStandardMaterial({ color: 0x2c3037, roughness: 0.6 });
+  // Reference photo (hub): olive-green fluted posts with a bronze collar
+  // and milky-white opal globes — visibly WHITE by day, warm-lit at night.
+  const postMaterial = new MeshStandardMaterial({ color: 0x55603c, roughness: 0.55 });
+  const collarMaterial = new MeshStandardMaterial({
+    color: 0x8a6f3c,
+    roughness: 0.4,
+    metalness: 0.45,
+  });
   const globeMaterial = new MeshStandardMaterial({
-    color: 0x3a3020,
+    color: 0xf2efe2,
     emissive: new Color(0xffe0a0),
     emissiveIntensity: 0,
-    roughness: 0.3,
+    roughness: 0.35,
   });
-  registerEmissive(globeMaterial, 3.4);
+  registerEmissive(globeMaterial, 3.4, 0.12); // faint milkiness by day
 
-  const posts = new InstancedMesh(new CylinderGeometry(0.07, 0.11, 3.2, 8), postMaterial, lamps.length);
+  const posts = new InstancedMesh(new CylinderGeometry(0.08, 0.13, 3.2, 8), postMaterial, lamps.length);
+  const collars = new InstancedMesh(new CylinderGeometry(0.11, 0.11, 0.22, 8), collarMaterial, lamps.length);
   const globes = new InstancedMesh(new SphereGeometry(0.3, 10, 10), globeMaterial, lamps.length);
   const m = new Matrix4();
   lamps.forEach((p, i) => {
     m.makeTranslation(p[0], 1.6, p[1]);
     posts.setMatrixAt(i, m);
+    m.makeTranslation(p[0], 3.15, p[1]);
+    collars.setMatrixAt(i, m);
     m.makeTranslation(p[0], 3.5, p[1]);
     globes.setMatrixAt(i, m);
   });
   posts.instanceMatrix.needsUpdate = true;
+  collars.instanceMatrix.needsUpdate = true;
   globes.instanceMatrix.needsUpdate = true;
   posts.castShadow = true;
-  scene.add(posts, globes);
+  scene.add(posts, collars, globes);
 }
 
 function scatter(
@@ -146,7 +157,7 @@ function buildPines(scene: Scene, positions: readonly Pt[], rng: () => number): 
     },
     {
       geometry: new ConeGeometry(1.6, 4.6, 8),
-      material: new MeshStandardMaterial({ color: 0x3c6434, roughness: 1, flatShading: true }),
+      material: new MeshStandardMaterial({ color: 0x4d8244, roughness: 1, flatShading: true }),
       y: (s) => (1.8 + 2.1) * s,
     },
   ]);

@@ -18,76 +18,21 @@ import {
 import { registerEmissive } from "../engine/emissive";
 import { registerUpdatable } from "../engine/updatables";
 import { PARK_LAYOUT } from "../data/parkLayout";
+import { stitchNarrowGaugeRing } from "../data/railLoop";
 
 const BERM_TOP = 2.75; // rail height above the berm blocks
 const TRAIN_SPEED = 5.5; // m/s
 const CAR_SPACING = 5.2; // m between car centers along the track
 
 /**
- * Stitch the unordered narrow-gauge rail segments into one ordered loop:
- * start from the longest segment, greedily append the nearest segment end
- * (either orientation), and drop spurs (roundhouse sidings) that never come
- * within tolerance. Returns the ordered points; the closed CatmullRom curve
- * bridges the remaining station gap (~44 m in current data).
+ * The DLRR loop at berm height. Ring stitching lives in
+ * src/data/railLoop.ts (shared with the guest-map filter script); the
+ * closed CatmullRom curve bridges the remaining station gap.
  */
 export function stitchRailLoop(): { points: Vector3[]; closureGap: number } {
-  const segs: [number, number][][] = PARK_LAYOUT.railroad
-    .filter((r) => r.kind === "narrow_gauge")
-    .map((r) => r.points.map((p) => [p[0], p[1]] as [number, number]));
-  if (segs.length === 0) return { points: [], closureGap: Infinity };
-
-  segs.sort((a, b) => b.length - a.length);
-  const first = segs.shift();
-  if (!first) return { points: [], closureGap: Infinity };
-  const chain: [number, number][] = [...first];
-
-  while (segs.length > 0) {
-    const tail = chain[chain.length - 1];
-    if (!tail) break;
-    let bestIndex = -1;
-    let bestReversed = false;
-    let bestDist = Infinity;
-    for (let i = 0; i < segs.length; i++) {
-      const s = segs[i];
-      if (!s) continue;
-      const head = s[0];
-      const end = s[s.length - 1];
-      if (!head || !end) continue;
-      const d0 = Math.hypot(head[0] - tail[0], head[1] - tail[1]);
-      const d1 = Math.hypot(end[0] - tail[0], end[1] - tail[1]);
-      if (d0 < bestDist) {
-        bestDist = d0;
-        bestIndex = i;
-        bestReversed = false;
-      }
-      if (d1 < bestDist) {
-        bestDist = d1;
-        bestIndex = i;
-        bestReversed = true;
-      }
-    }
-    const seg = segs.splice(bestIndex, 1)[0];
-    if (!seg) break;
-    if (bestDist > 40) continue; // spur — drop it
-    chain.push(...(bestReversed ? [...seg].reverse() : seg));
-  }
-
-  // De-duplicate consecutive points (segment joints repeat their shared
-  // endpoint). Zero-length curve segments make three's arc-length cache
-  // divide 0/0 → NaN t → crash inside CatmullRomCurve3.getPoint.
-  const deduped: [number, number][] = [];
-  for (const p of chain) {
-    const last = deduped[deduped.length - 1];
-    if (last && Math.hypot(p[0] - last[0], p[1] - last[1]) < 0.5) continue;
-    deduped.push(p);
-  }
-
-  const head = deduped[0];
-  const tail = deduped[deduped.length - 1];
-  const closureGap =
-    head && tail ? Math.hypot(head[0] - tail[0], head[1] - tail[1]) : Infinity;
+  const { points, closureGap } = stitchNarrowGaugeRing(PARK_LAYOUT.railroad);
   return {
-    points: deduped.map(([px, pz]) => new Vector3(px, BERM_TOP, pz)),
+    points: points.map(([px, pz]) => new Vector3(px, BERM_TOP, pz)),
     closureGap,
   };
 }

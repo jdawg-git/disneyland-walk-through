@@ -1,5 +1,7 @@
-import { Scene } from "three";
+import { Scene, Vector3 } from "three";
 import "./ui/base.css";
+import { LANDMARK_POIS, type LandmarkPoi } from "./config/landmarkInfo";
+import { selectGazePoi } from "./systems/landmarkGaze";
 import { FirstPersonControls, EYE_HEIGHT } from "./engine/controls";
 import { DayNightSystem } from "./engine/dayNight";
 import { updateAll } from "./engine/updatables";
@@ -93,8 +95,34 @@ function boot(p: AppParams): void {
     createStartOverlay(bundle.renderer.domElement, () => audio.unlock());
   }
 
+  // Landmark gaze: what the player is looking at (drives the HUD
+  // nameplate and enriches the guide's live context).
+  let gazePoi: LandmarkPoi | null = null;
+  let gazeClock = 1; // compute on the very first frame (verify harness freezes early)
+  const gazeForward = new Vector3();
+  const updateGaze = (dt: number): void => {
+    gazeClock += dt;
+    if (gazeClock < 0.2) return; // ~5 Hz is plenty for a nameplate
+    gazeClock = 0;
+    bundle.camera.getWorldDirection(gazeForward);
+    gazePoi = selectGazePoi(
+      {
+        x: bundle.camera.position.x,
+        y: bundle.camera.position.y,
+        z: bundle.camera.position.z,
+        fx: gazeForward.x,
+        fy: gazeForward.y,
+        fz: gazeForward.z,
+      },
+      LANDMARK_POIS,
+      gazePoi ? gazePoi.id : null,
+    );
+    hud?.setGazePoi(gazePoi);
+  };
+
+  let hud: ReturnType<typeof createHud> | null = null;
   if (p.hud) {
-    createHud({
+    hud = createHud({
       dayNight,
       audio,
       scavenger,
@@ -112,6 +140,7 @@ function boot(p: AppParams): void {
           scavengerCollected: s.collected,
           scavengerTotal: s.total,
           currentClue: s.clue,
+          ...(gazePoi ? { lookingAt: gazePoi.name } : {}),
         };
       },
     });
@@ -130,6 +159,7 @@ function boot(p: AppParams): void {
       zones.update(dt, bundle.camera.position);
       scavenger.update(dt, bundle.camera.position);
       crowd.update(dt);
+      updateGaze(dt);
       updateAll(dt);
     }
     bundle.render(dt);

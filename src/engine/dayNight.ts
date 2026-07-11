@@ -25,16 +25,18 @@ interface LightingPreset {
   readonly emissiveT: number;
 }
 
+// Vibrant cartoon-realism day: a brilliant saturated sky, warm golden key
+// light, and generous sky-fill so shadow sides stay colorful, never muddy.
 const DAY: LightingPreset = {
-  skyColor: new Color(0x8ec8ea),
-  fogColor: new Color(0xbcd8e8),
-  fogDensity: 0.0022,
-  sunColor: new Color(0xfff2d8),
-  sunIntensity: 2.6,
+  skyColor: new Color(0x63b8f0),
+  fogColor: new Color(0xa8d4f0),
+  fogDensity: 0.0019,
+  sunColor: new Color(0xfff0c8),
+  sunIntensity: 2.9,
   sunPosition: new Vector3(180, 260, 120),
-  hemiSky: new Color(0xc6ddf2),
-  hemiGround: new Color(0x9c907c),
-  hemiIntensity: 1.1,
+  hemiSky: new Color(0xbfe0fa),
+  hemiGround: new Color(0xa89a80),
+  hemiIntensity: 1.25,
   bloomIntensity: 0.25,
   emissiveT: 0,
 };

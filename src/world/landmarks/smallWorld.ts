@@ -33,7 +33,7 @@ export function buildSmallWorld(scene: Scene, x: number, z: number): void {
   registerEmissive(white, 0.3);
 
   const gold = new MeshStandardMaterial({
-    color: 0xb08a30,
+    color: 0xd4a63c,
     emissive: new Color(0xffd980),
     emissiveIntensity: 0.25,
     roughness: 0.4,

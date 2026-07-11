@@ -55,7 +55,7 @@ const RIB_PATH: readonly (readonly [number, number])[] = [
 ];
 
 export function buildSpaceMountain(scene: Scene, x: number, z: number): void {
-  const shell = new MeshStandardMaterial({ color: 0xe6eaf0, roughness: 0.5 });
+  const shell = new MeshStandardMaterial({ color: 0xf2f4f8, roughness: 0.45 });
   const ribMaterial = new MeshStandardMaterial({ color: 0xf4f6f9, roughness: 0.4, metalness: 0.1 });
 
   const dome = new Mesh(

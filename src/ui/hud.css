@@ -192,3 +192,33 @@
 #hud-guide-input::placeholder {
   color: rgba(245, 239, 223, 0.4);
 }
+
+/* --- landmark gaze nameplate (top center) --- */
+#hud-poi {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: rgba(16, 20, 30, 0.72);
+  color: #f4efe2;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  max-width: 420px;
+}
+#hud-poi.visible {
+  opacity: 1;
+}
+#hud-poi-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#hud-poi-meta {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+}

@@ -13,7 +13,7 @@ const BASE_RADIUS = 24;
 const SNOW_LINE = 0.4; // normalized height where snow begins
 
 const ROCK = new Color(0x939caa);
-const ROCK_DARK = new Color(0x6a7280);
+const ROCK_DARK = new Color(0x776f64);
 const SNOW = new Color(0xffffff);
 
 export function buildMatterhorn(scene: Scene, x: number, z: number): void {

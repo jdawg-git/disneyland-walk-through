@@ -49,11 +49,12 @@ const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
   { kind: "box", x: -301.8, z: 120.2, halfW: 12, halfD: 9.5 },
   // Enchanted Tiki Room.
   { kind: "box", x: -53.2, z: 114.3, halfW: 15.5, halfD: 8.5 },
-  // Splash Mountain buttes (keep in sync with landmarks/splashMountain.ts).
-  { kind: "circle", x: -360, z: -15, r: 18 },
-  { kind: "circle", x: -371, z: -7, r: 12 },
-  { kind: "circle", x: -350, z: -22, r: 12 },
-  { kind: "circle", x: -351, z: -6, r: 9.5 },
+  // Tiana's Bayou Adventure buttes (keep in sync with landmarks/tianas.ts:
+  // group at (-348, 68) rotated +90°, local (dx,dz) → world (x+dz, z−dx)).
+  { kind: "circle", x: -348, z: 68, r: 18 },
+  { kind: "circle", x: -340, z: 79, r: 12 },
+  { kind: "circle", x: -355, z: 58, r: 12 },
+  { kind: "circle", x: -339, z: 59, r: 9.5 },
 ];
 
 /**

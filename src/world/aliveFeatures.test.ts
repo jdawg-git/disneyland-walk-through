@@ -6,7 +6,9 @@ import { WalkableGrid } from "./walkable";
 describe("railroad loop", () => {
   it("stitches the narrow-gauge segments into one near-closed loop", () => {
     const { points, closureGap } = stitchRailLoop();
-    expect(points.length).toBeGreaterThan(100);
+    // 94 pts after the roundhouse-spur trim (the yard lead used to double
+    // back to z≈-375 twice and corrupt the loop).
+    expect(points.length).toBeGreaterThan(80);
     // The closed CatmullRom bridges the station gap; keep it tight.
     expect(closureGap).toBeLessThan(50);
   });
@@ -17,7 +19,9 @@ describe("railroad loop", () => {
     const zs = points.map((p) => p.z);
     expect(Math.min(...xs)).toBeLessThan(-300);
     expect(Math.max(...xs)).toBeGreaterThan(250);
-    expect(Math.min(...zs)).toBeLessThan(-300);
+    // North side runs along Toontown's south berm (z≈-245); the only rail
+    // beyond that was the roundhouse spur, now trimmed.
+    expect(Math.min(...zs)).toBeLessThan(-230);
     expect(Math.max(...zs)).toBeGreaterThan(250);
   });
 });

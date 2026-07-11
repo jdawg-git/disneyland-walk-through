@@ -1,7 +1,9 @@
 import {
   BloomEffect,
+  BrightnessContrastEffect,
   EffectComposer,
   EffectPass,
+  HueSaturationEffect,
   RenderPass,
   SMAAEffect,
   ToneMappingEffect,
@@ -71,10 +73,15 @@ export function createRenderer(container: HTMLElement, scene: Scene): RendererBu
     luminanceSmoothing: 0.2,
     mipmapBlur: true,
   });
-  const vignette = new VignetteEffect({ darkness: 0.42, offset: 0.28 });
+  const vignette = new VignetteEffect({ darkness: 0.38, offset: 0.28 });
   const toneMapping = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
+  // Vibrant cartoon-realism grade, applied AFTER tone mapping: push
+  // saturation and a touch of contrast so colors read luminous and
+  // silhouettes pop — tuned to stay shy of crushing the night emissives.
+  const grade = new HueSaturationEffect({ saturation: 0.17 });
+  const punch = new BrightnessContrastEffect({ brightness: 0.02, contrast: 0.08 });
   const smaa = new SMAAEffect();
-  composer.addPass(new EffectPass(camera, bloom, vignette, toneMapping, smaa));
+  composer.addPass(new EffectPass(camera, bloom, vignette, toneMapping, grade, punch, smaa));
 
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;

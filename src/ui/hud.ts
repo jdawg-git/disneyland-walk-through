@@ -1,5 +1,6 @@
 import "./hud.css";
 import type { DayNightSystem } from "../engine/dayNight";
+import type { LandmarkPoi } from "../config/landmarkInfo";
 import type { AudioZoneSystem } from "../systems/audioZones";
 import type { GuideSystem, GuideContext } from "../systems/guide";
 import type { ScavengerSystem } from "../systems/scavenger";
@@ -14,19 +15,28 @@ export interface HudDeps {
   readonly guideContext: () => GuideContext;
 }
 
+export interface HudHandle {
+  /** Show/refresh (or hide, with null) the landmark gaze nameplate. */
+  setGazePoi(poi: LandmarkPoi | null): void;
+}
+
 /**
  * The single HUD overlay: land label + legend (top left), environment
- * controls (top right), scavenger progress (bottom right), guide chat
- * (bottom left). `H` toggles visibility. Plain DOM — systems push state via
- * their event emitters.
+ * controls (top right), landmark nameplate (top center), scavenger
+ * progress (bottom right), guide chat (bottom left). `H` toggles
+ * visibility. Plain DOM — systems push state via their event emitters.
  */
-export function createHud(deps: HudDeps): void {
+export function createHud(deps: HudDeps): HudHandle {
   const hud = document.createElement("div");
   hud.id = "hud";
   hud.innerHTML = `
     <div class="hud-panel" id="hud-status">
       <div id="hud-land">Disneyland</div>
       <div id="hud-legend">WASD move · mouse look · hold Shift to run<br>N day/night · H hide HUD · Esc frees cursor</div>
+    </div>
+    <div id="hud-poi">
+      <div id="hud-poi-name"></div>
+      <div id="hud-poi-meta"></div>
     </div>
     <div class="hud-panel" id="hud-env">
       <div class="hud-row">
@@ -168,4 +178,27 @@ export function createHud(deps: HudDeps): void {
     });
   });
   guideInput.addEventListener("keyup", (e: KeyboardEvent) => e.stopPropagation());
+
+  // --- landmark gaze nameplate ---
+  const poiBox = el<HTMLDivElement>("hud-poi");
+  const poiName = el<HTMLDivElement>("hud-poi-name");
+  const poiMeta = el<HTMLDivElement>("hud-poi-meta");
+  let shownPoiId: string | null = null;
+  return {
+    setGazePoi(poi: LandmarkPoi | null): void {
+      if (!poi) {
+        if (shownPoiId !== null) {
+          poiBox.classList.remove("visible");
+          shownPoiId = null;
+        }
+        return;
+      }
+      if (shownPoiId !== poi.id) {
+        poiName.textContent = poi.name;
+        poiMeta.textContent = `${poi.land} — ${poi.blurb}`;
+        shownPoiId = poi.id;
+      }
+      poiBox.classList.add("visible");
+    },
+  };
 }

@@ -27,7 +27,7 @@ const LANDMARK_NAMES: Record<string, string> = {
   hauntedMansion: "the Haunted Mansion",
   bigThunder: "Big Thunder Mountain",
   smallWorld: "it's a small world",
-  splashMountain: "Splash Mountain",
+  tianasBayou: "Tiana's Bayou Adventure",
 };
 
 function buildPoiTable(): PoiEntry[] {
@@ -78,6 +78,8 @@ export interface GuideSnapshot {
   readonly scavengerCollected: number;
   readonly scavengerTotal: number;
   readonly currentClue: string | null;
+  /** Landmark the player is currently looking at (gaze HUD), if any. */
+  readonly lookingAt?: string;
 }
 
 /** Render the live park state as plain text for the system prompt. */
@@ -85,6 +87,9 @@ export function renderContext(s: GuideSnapshot): string {
   const lines: string[] = [];
   lines.push(`Player location: ${s.land ? s.land.name : "a backstage area"} (park coordinates x=${s.x.toFixed(0)}, z=${s.z.toFixed(0)}; north is -z).`);
   lines.push(`Player is facing ${compassWord(s.headingDeg)}.`);
+  if (s.lookingAt !== undefined) {
+    lines.push(`The player is currently looking straight at: ${s.lookingAt}.`);
+  }
   lines.push(`Time: ${s.timeOfDay}. Crowds today: ${s.crowdLabel}.`);
   lines.push(
     `Scavenger hunt: ${s.scavengerCollected}/${s.scavengerTotal} golden stars found.` +

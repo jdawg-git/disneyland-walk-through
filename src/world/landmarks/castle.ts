@@ -34,12 +34,12 @@ import { stainedGlassTexture } from "../textures";
  * opening below matches it exactly. Keep the group position/scale fixed.
  */
 
-const STONE = 0x9a8f96;
-const PINK = 0xe3b6c6;
+const STONE = 0x8f9aac;
+const PINK = 0xeabccd;
 const PINK_DEEP = 0xd6a2b8;
 const CREAM = 0xf2e4d8;
-const ROOF_BLUE = 0x3d5aa8;
-const ROOF_BLUE_DEEP = 0x32488c;
+const ROOF_BLUE = 0x2f55c2;
+const ROOF_BLUE_DEEP = 0x2743a0;
 
 export function buildCastle(scene: Scene, x: number, z: number): void {
   const castle = new Group();
