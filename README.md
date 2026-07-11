@@ -1,4 +1,4 @@
-# Disneyland Virtual
+# Disneyland Walk Through
 
 A first-person, walkable, stylized 3D recreation of Disneyland Park (Anaheim)
 that runs in a desktop browser. Low-poly diorama look carried by lighting,

@@ -13,7 +13,7 @@ export function createStartOverlay(
   overlay.id = "start-overlay";
   overlay.innerHTML = `
     <div class="start-card">
-      <h1>Disneyland Virtual</h1>
+      <h1>Disneyland Walk Through</h1>
       <p>Click to enter the park</p>
       <p class="controls-hint">WASD move &middot; mouse look &middot; hold Shift to run &middot; N day/night<br>H hide HUD &middot; Esc frees the cursor for the menus</p>
     </div>`;
