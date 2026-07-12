@@ -54,8 +54,10 @@ function boot(p: AppParams): void {
   const dayNight = new DayNightSystem(scene);
   dayNight.bindBloom(bundle.setBloomIntensity);
 
-  buildPark(scene, p.seed);
+  // Grid first: buildPark's railroad splits its berm into underpasses
+  // exactly where the walkable grid says guests pass under the tracks.
   const walkable = new WalkableGrid();
+  buildPark(scene, p.seed, (x, z) => walkable.isWalkable(x, z));
 
   const zones = new ZoneTracker();
   const audio = new AudioZoneSystem();

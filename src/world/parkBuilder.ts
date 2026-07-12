@@ -62,9 +62,13 @@ const TREE_SPECIES: Partial<Record<LandId, "round" | "palm" | "pine">> = {
  * generic buildings (per-land palettes), bespoke landmarks, and props
  * scattered from the real greens/walkway data.
  */
-export function buildPark(scene: Scene, seed: number): void {
+export function buildPark(
+  scene: Scene,
+  seed: number,
+  isWalkable: (x: number, z: number) => boolean,
+): void {
   buildTerrain(scene);
-  buildRailroad(scene);
+  buildRailroad(scene, isWalkable);
 
   const skipIds = new Set<number>(LANDMARKS.flatMap((l) => [...l.osmIds]));
   buildBuildings(scene, {
@@ -194,6 +198,124 @@ function generatePropPlacements(seed: number): PropPlacements {
         continue;
       }
       bucket.push(p);
+    }
+  }
+
+  // --- Tree blanket: the real park is canopy everywhere a guest can't
+  // walk. Grid-sample the whole boundary interior and plant wherever we're
+  // clear of paths, buildings, plazas, water, and landmarks — this is what
+  // makes the aerial read like the guest map instead of bare fields. The
+  // Jungle Cruise river ("Rivers of the World") deliberately KEEPS canopy
+  // planted over it: the map hides that water under jungle.
+  {
+    // Path proximity hash: resample every path at ~6 m into 10 m cells.
+    const CELL = 6;
+    const pathCells = new Set<string>();
+    const cellKey = (x: number, z: number): string =>
+      `${Math.floor(x / CELL)},${Math.floor(z / CELL)}`;
+    for (const path of PARK_LAYOUT.paths) {
+      for (let i = 0; i < path.points.length - 1; i++) {
+        const a = path.points[i];
+        const b = path.points[i + 1];
+        if (!a || !b) continue;
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const steps = Math.max(1, Math.ceil(len / 4));
+        for (let s = 0; s <= steps; s++) {
+          const t = s / steps;
+          pathCells.add(cellKey(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t));
+        }
+      }
+    }
+    const nearPath = (x: number, z: number): boolean => {
+      const cx = Math.floor(x / CELL);
+      const cz = Math.floor(z / CELL);
+      for (let ix = -1; ix <= 1; ix++) {
+        for (let iz = -1; iz <= 1; iz++) {
+          if (pathCells.has(`${cx + ix},${cz + iz}`)) return true;
+        }
+      }
+      return false;
+    };
+
+    // Bbox-prefiltered polygon groups to stay clear of.
+    interface Blocker {
+      readonly outer: readonly Pt[];
+      readonly minX: number;
+      readonly maxX: number;
+      readonly minZ: number;
+      readonly maxZ: number;
+    }
+    const toBlocker = (outer: readonly Pt[]): Blocker => {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minZ = Infinity;
+      let maxZ = -Infinity;
+      for (const p of outer) {
+        minX = Math.min(minX, p[0]);
+        maxX = Math.max(maxX, p[0]);
+        minZ = Math.min(minZ, p[1]);
+        maxZ = Math.max(maxZ, p[1]);
+      }
+      return { outer, minX, maxX, minZ, maxZ };
+    };
+    const blockers: Blocker[] = [
+      ...PARK_LAYOUT.buildings.map((b) => toBlocker(b.outer)),
+      ...PARK_LAYOUT.plazas.map((p) => toBlocker(p.outer)),
+      // All water except the Jungle Cruise river (canopy goes OVER it).
+      ...PARK_LAYOUT.water
+        .filter((w) => w.name !== "Rivers of the World")
+        .map((w) => toBlocker(w.outer)),
+    ];
+    const jungleRiver = PARK_LAYOUT.water.find((w) => w.name === "Rivers of the World");
+    const inBlocker = (x: number, z: number): boolean =>
+      blockers.some(
+        (bl) =>
+          x >= bl.minX &&
+          x <= bl.maxX &&
+          z >= bl.minZ &&
+          z <= bl.maxZ &&
+          pointInPolygon(x, z, bl.outer),
+      );
+
+    // The guest map shows Tomorrowland more open; everywhere else, dense.
+    const KEEP_BY_LAND: Partial<Record<LandId, number>> = {
+      tomorrowland: 0.35,
+      mainStreet: 0.6,
+      toontown: 0.6,
+      adventureland: 0.97,
+      frontierland: 0.95,
+      critterCountry: 0.97,
+    };
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (const p of PARK_LAYOUT.boundary) {
+      minX = Math.min(minX, p[0]);
+      maxX = Math.max(maxX, p[0]);
+      minZ = Math.min(minZ, p[1]);
+      maxZ = Math.max(maxZ, p[1]);
+    }
+    for (let gx = minX; gx <= maxX; gx += 7) {
+      for (let gz = minZ; gz <= maxZ; gz += 7) {
+        const x = gx + (rng() - 0.5) * 6;
+        const z = gz + (rng() - 0.5) * 6;
+        if (!pointInPolygon(x, z, PARK_LAYOUT.boundary)) continue;
+        // Jungle canopy swallows the Jungle Cruise river even beside its
+        // walkways — that's how the guest map hides the ride's water.
+        const overJungle =
+          jungleRiver !== undefined && pointInPolygon(x, z, jungleRiver.outer);
+        if (!overJungle && nearPath(x, z)) continue;
+        if (Math.hypot(x - 1, z - 55) < 10) continue; // Partners circle
+        if (LANDMARKS.some((l) => Math.hypot(x - l.position[0], z - l.position[1]) < 16)) continue;
+        if (inBlocker(x, z)) continue;
+        const land = landAt(x, z);
+        const keep = KEEP_BY_LAND[land?.id ?? "hub"] ?? 0.85;
+        if (rng() > keep) continue;
+        const species = land ? (TREE_SPECIES[land.id] ?? "round") : "pine";
+        (species === "palm" ? palm : species === "pine" ? pine : round).push([x, z]);
+      }
     }
   }
 

@@ -1,5 +1,7 @@
 import {
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
   Color,
   InstancedMesh,
   Matrix4,
@@ -50,7 +52,7 @@ export function buildTerrain(scene: Scene): void {
       flatPolygonGeometry(land.polygon),
       new MeshStandardMaterial({ color: land.ground, roughness: 0.98 }),
     );
-    groundMesh.position.y = 0.015;
+    groundMesh.position.y = 0.02;
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
 
@@ -79,7 +81,7 @@ export function buildTerrain(scene: Scene): void {
     const merged = mergeFlatGeometries(geos);
     if (!merged) continue;
     const mesh = new Mesh(merged, plazaMaterials.get(key) ?? defaultPlazaMaterial);
-    mesh.position.y = 0.03;
+    mesh.position.y = 0.05;
     mesh.receiveShadow = true;
     scene.add(mesh);
   }
@@ -89,14 +91,14 @@ export function buildTerrain(scene: Scene): void {
   const grassMerged = mergeFlatGeometries(PARK_LAYOUT.greens.map((g) => flatPolygonGeometry(g.outer)));
   if (grassMerged) {
     const mesh = new Mesh(grassMerged, grassMaterial);
-    mesh.position.y = 0.045;
+    mesh.position.y = 0.08;
     mesh.receiveShadow = true;
     scene.add(mesh);
   }
 
   // Water with a slow scrolling ripple sheen.
   const waterMaterial = new MeshStandardMaterial({
-    color: 0x3a6a9e,
+    color: 0x4a86c0,
     roughness: 0.25,
     metalness: 0.1,
     map: rippleTexture(),
@@ -117,10 +119,11 @@ export function buildTerrain(scene: Scene): void {
   );
   if (waterMerged) {
     const mesh = new Mesh(waterMerged, waterMaterial);
-    mesh.position.y = 0.08;
+    mesh.position.y = 0.13;
     scene.add(mesh);
   }
 
+  buildWalkways(scene);
   buildBridgeDecks(scene);
 }
 
@@ -161,7 +164,7 @@ function buildBridgeDecks(scene: Scene): void {
       const length = Math.hypot(dx, dz);
       if (length < 0.5) continue;
       decks.push({
-        mid: new Vector3(midX, 0.14, midZ),
+        mid: new Vector3(midX, 0.17, midZ),
         yaw: Math.atan2(-dz, dx), // unit-x box aligned along the segment
         length: length + 1.2, // overlap onto both banks
       });
@@ -170,7 +173,7 @@ function buildBridgeDecks(scene: Scene): void {
   // Drawbridge: north-south deck dead-center on the corridor, spanning the
   // moat in front of the gate (castle south face ≈ z −1; moat to z ≈ 9).
   decks.push({
-    mid: new Vector3(CASTLE_BRIDGE.x, 0.14, CASTLE_BRIDGE.z),
+    mid: new Vector3(CASTLE_BRIDGE.x, 0.17, CASTLE_BRIDGE.z),
     yaw: Math.PI / 2, // unit-x box turned to run north-south
     length: 14,
     width: 1.6, // ≈5.4 m — matches the 5 m corridor
@@ -190,6 +193,64 @@ function buildBridgeDecks(scene: Scene): void {
     mesh.setMatrixAt(i, m);
   });
   mesh.instanceMatrix.needsUpdate = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+}
+
+/**
+ * Visible walkway ribbons: the guest map's defining feature is its tan
+ * path network, but until now paths existed only as carved WALKABLE space
+ * with no rendered surface (the Toontown walkway was literally invisible).
+ * One merged mesh of flat quads along every footway/pedestrian polyline.
+ */
+function buildWalkways(scene: Scene): void {
+  const HALF_WIDTH = 2.2;
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const push = (x: number, z: number): void => {
+    positions.push(x, 0, z);
+    normals.push(0, 1, 0);
+    uvs.push(0, 0);
+  };
+  for (const path of PARK_LAYOUT.paths) {
+    if (path.kind !== "footway" && path.kind !== "pedestrian" && path.kind !== "steps") continue;
+    for (let i = 0; i < path.points.length - 1; i++) {
+      const a = path.points[i];
+      const b = path.points[i + 1];
+      if (!a || !b) continue;
+      const dx = b[0] - a[0];
+      const dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz);
+      if (len < 0.3) continue;
+      // Perpendicular half-width, slightly extended along the segment so
+      // consecutive quads overlap at joints instead of leaving wedges.
+      const ex = (dx / len) * 0.8;
+      const ez = (dz / len) * 0.8;
+      const nx = (dz / len) * HALF_WIDTH;
+      const nz = -(dx / len) * HALF_WIDTH;
+      const ax = a[0] - ex;
+      const az = a[1] - ez;
+      const bx = b[0] + ex;
+      const bz = b[1] + ez;
+      push(ax - nx, az - nz);
+      push(bx - nx, bz - nz);
+      push(bx + nx, bz + nz);
+      push(ax - nx, az - nz);
+      push(bx + nx, bz + nz);
+      push(ax + nx, az + nz);
+    }
+  }
+  if (positions.length === 0) return;
+  const geo = new BufferGeometry();
+  geo.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+  geo.setAttribute("normal", new BufferAttribute(new Float32Array(normals), 3));
+  geo.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
+  const mesh = new Mesh(
+    geo,
+    new MeshStandardMaterial({ color: 0xd8cab0, roughness: 0.95 }),
+  );
+  mesh.position.y = 0.1; // above greens, below water/decks
   mesh.receiveShadow = true;
   scene.add(mesh);
 }

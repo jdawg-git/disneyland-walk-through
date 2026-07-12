@@ -35,12 +35,9 @@ const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
   { kind: "circle", x: 151, z: 162, r: 33.5 },
   // Matterhorn.
   { kind: "circle", x: 109, z: -38.8, r: 29.5 },
-  // Big Thunder buttes (one circle per butte).
-  { kind: "circle", x: -124.2, z: 3.8, r: 21 },
-  { kind: "circle", x: -142.2, z: 15.8, r: 14 },
-  { kind: "circle", x: -110.2, z: -10.2, r: 16 },
-  { kind: "circle", x: -106.2, z: 13.8, r: 10 },
-  { kind: "circle", x: -136.2, z: -14.2, r: 10 },
+  // Big Thunder base mound (v3 hoodoo cluster — one footprint circle,
+  // keep in sync with BASE_RADIUS in landmarks/bigThunder.ts).
+  { kind: "circle", x: -124.2, z: 3.8, r: 30 },
   // it's a small world facade (route to Toontown passes west of it).
   { kind: "box", x: 114.3, z: -247.7, halfW: 51, halfD: 4 },
   // Pirates facade + wings.
@@ -106,6 +103,13 @@ export class WalkableGrid {
       this.fillPolygon(b.outer, 0);
     }
     for (const w of PARK_LAYOUT.water) this.fillPolygon(w.outer, 0);
+    // 2b. The DLRR berm is solid (railroad.ts renders it) — block a strip
+    //     along the named rail line; path carving below reopens exactly
+    //     the underpass crossings the berm splits open visually.
+    for (const rail of PARK_LAYOUT.railroad) {
+      if (rail.name !== "Disneyland Railroad") continue;
+      this.paintPolyline(rail.points, 3.5, 0);
+    }
     this.dilateBlocked(PLAYER_RADIUS_CELLS);
     // 3. Carve real walkways at full width — bridges + castle corridor —
     //    and pedestrian AREA polygons (plazas/street surfaces).
@@ -233,6 +237,10 @@ export class WalkableGrid {
 
   /** Mark a ribbon around a polyline walkable (bridges, corridors). */
   private carvePolyline(points: readonly Pt[], halfWidth: number): void {
+    this.paintPolyline(points, halfWidth, 1);
+  }
+
+  private paintPolyline(points: readonly Pt[], halfWidth: number, value: 0 | 1): void {
     for (let i = 0; i < points.length - 1; i++) {
       const a = points[i];
       const b = points[i + 1];
@@ -249,7 +257,7 @@ export class WalkableGrid {
         const r1 = Math.min(this.rows - 1, Math.floor((z + halfWidth - this.minZ) / CELL));
         for (let r = r0; r <= r1; r++) {
           for (let c = c0; c <= c1; c++) {
-            this.grid[r * this.cols + c] = 1;
+            this.grid[r * this.cols + c] = value;
           }
         }
       }

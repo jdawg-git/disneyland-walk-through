@@ -106,11 +106,16 @@ const KEEP_NAMES = new Set(["Mickey's Toontown Depot", "Telegraph Office"]);
 const RENAME = new Map<string, string>([["Star Wars: Launch Bay", "Tomorrowland Theater"]]);
 
 /**
- * Unnamed show-building slabs / leftovers inside the berm, identified in
- * verify renders (extend as more are spotted). Landmark footprints are
- * skipped at render time via LANDMARKS[].osmIds, not here.
+ * Show-building slabs / leftovers identified in verify renders (extend as
+ * more are spotted). Landmark footprints are skipped at render time via
+ * LANDMARKS[].osmIds, not here.
  */
-const SKIP_IDS = new Set<number>([]);
+const SKIP_IDS = new Set<number>([
+  // Indiana Jones Adventure show building: a 131×169 m warehouse whose
+  // centroid is in Adventureland but which sprawls far OUTSIDE the berm
+  // (the aerial's "stray slab"). The map shows only a modest entrance.
+  824031782,
+]);
 
 const dropped: Record<string, number> = {};
 const drop = (bucket: string): void => {
@@ -154,6 +159,11 @@ for (const p of raw.paths) {
 }
 
 const water = raw.water.filter((w) => {
+  // Backstage ride-vehicle storage ponds — never on the guest map.
+  if (w.name !== undefined && /boat storage/i.test(w.name)) {
+    drop("water:backstage");
+    return false;
+  }
   const [cx, cz] = centroid(w.outer);
   if (inGuestArea(cx, cz)) return true;
   drop("water:outside");

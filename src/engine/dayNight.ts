@@ -42,15 +42,15 @@ const DAY: LightingPreset = {
 };
 
 const NIGHT: LightingPreset = {
-  skyColor: new Color(0x101c42),
-  fogColor: new Color(0x131f48),
+  skyColor: new Color(0x141f4e),
+  fogColor: new Color(0x172452),
   fogDensity: 0.0026,
   sunColor: new Color(0xa8bcec),
-  sunIntensity: 0.55,
+  sunIntensity: 0.63,
   sunPosition: new Vector3(-140, 220, -160),
-  hemiSky: new Color(0x2a3c6e),
-  hemiGround: new Color(0x1e1a30),
-  hemiIntensity: 0.75,
+  hemiSky: new Color(0x32467c),
+  hemiGround: new Color(0x241f38),
+  hemiIntensity: 0.86,
   bloomIntensity: 1.05,
   emissiveT: 1,
 };

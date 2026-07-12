@@ -142,7 +142,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "frontierland",
-    ground: 0xb0854e,
+    ground: 0xb59a6e,
     name: "Frontierland",
     audioZone: "frontierland",
     palette: {
@@ -164,7 +164,7 @@ export const LANDS: readonly LandDef[] = [
   },
   {
     id: "fantasyland",
-    ground: 0xb2a4ae,
+    ground: 0xb0a8a2,
     name: "Fantasyland",
     audioZone: "fantasyland",
     palette: {
@@ -216,7 +216,7 @@ export const LANDS: readonly LandDef[] = [
     palette: {
       // Clean space-age whites and cool blues (Space Mountain reference).
       walls: [0xdce8f0, 0x9fc4dc, 0xc0d4e4, 0x88aac8],
-      roofs: [0x5878a0, 0x4a6890],
+      roofs: [0xc4ccd4, 0xaeb8c2],
       trim: 0xf0f8ff,
       glow: 0x9adfff,
     },

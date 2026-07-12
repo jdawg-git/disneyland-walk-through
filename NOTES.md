@@ -355,3 +355,51 @@ Running log of how this project is built and why. Newest decisions at the bottom
   the Mansion grew a canopy through its portico) — 15 m exclusion around
   every LANDMARKS anchor.
 - 46 tests green; worst frame 764 calls / 634k tris (budget 1200).
+
+## v5 — Aerial truth (tree blanket, real underpasses, hoodoos)
+
+- TREE BLANKET: the guest map's defining texture is canopy between every
+  walkway. buildTreeBlanket grid-samples the boundary (7 m + jitter),
+  spatial-hashes resampled path points (CELL 6 m, 3×3 lookup) for the
+  near-path test, bbox-prefilters polygon blockers. Jungle Cruise's
+  "Rivers of the World" is deliberately planted OVER (the map hides that
+  river under jungle) and skips the near-path test there. Per-land keep
+  rates: adventure/frontier/critter ~0.95, tomorrowland 0.35.
+- BERM BUG (the recurring "green wall", finally): place() scales local X
+  by run length assuming unit-length geometry — the berm prism was a
+  4-sided cylinder whose cross-section was ALREADY 7 m in X, so every
+  berm run rendered 7× TOO LONG (a 45 m run became a 315 m band burying
+  Toontown and covering its own underpass gaps). The berm is now a
+  unit-length BoxGeometry with the top face pinched in Z (trapezoid
+  cross-section extruded along the track). Lesson: instanced-scale
+  contracts ("local X must be 1 m") deserve a comment AND a probe — the
+  gap logic was correct the whole time; only the geometry lied.
+- Underpasses are WALKABLE-DRIVEN: main.ts builds WalkableGrid BEFORE
+  buildPark and passes isWalkable down; railroad.ts probes the rail
+  centerline every 1.5 m and splits the berm wherever guests can walk
+  (GAP_PAD 1.6/side), emitting stone abutments + a lintel carrying the
+  track. Visual gaps therefore agree exactly with collision gaps —
+  plaza-carved crossings included. 20 underpasses emerge, Toontown's
+  (18,-242) is 11.5 m wide.
+- Castle: central rear spire moved from ground level onto the keep
+  bridge (baseY 17, h 24→14) — the corridor now reads open end-to-end.
+- Big Thunder v3: LatheGeometry hoodoo profile — flared talus, tapering
+  shaft, hard-step ANVIL caprock with a flat top (a rounded caprock +
+  domed tip read as something else entirely; the user noticed). Terraced
+  ledges via triangle wave in sculpt(); 8 leaning fingers on one r-30
+  mound; single r-30 collider circle.
+- Night preset +15% (sun 0.63, hemi 0.86, sky 0x141f4e) — floor legible,
+  emissive contrast intact.
+- Walkway ribbons: every kept footway renders as a merged tan ribbon
+  mesh (halfW 2.2, y 0.1) — one draw call; the park finally has visible
+  paths at eye level AND in aerials.
+- Water reading: boat-storage ponds culled in the filter; water softened
+  to 0x4a86c0; mega-footprint (>1200 m²) show buildings auto-paint
+  go-away green so they recede in aerials like the real ones.
+- Indiana Jones show building (824031782) skip-listed — the aerial's
+  stray slab; its centroid is inside the ring but the 131×169 m slab
+  sprawls far outside.
+- KNOWN: at the 560 m diagnostic aerial the stacked ground layers show
+  faint dash striping (depth precision); clean at 300 m and at eye level,
+  so left alone.
+- 46 tests green; 805 calls / 735k tris at the aerial (budget 1200).

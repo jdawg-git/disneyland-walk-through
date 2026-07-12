@@ -69,7 +69,9 @@ export const STARS: readonly StarDef[] = [
   },
   {
     id: 11,
-    position: [30, 1.4, -242],
+    // On the Toontown gateway path just south of the railroad underpass
+    // (the berm strip itself is blocked ground now).
+    position: [18, 1.4, -242],
     clue: "March north past the singing clock of the world's smallest voyage, into the cartoon town where Mickey lives.",
   },
   {

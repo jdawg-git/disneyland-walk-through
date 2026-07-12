@@ -155,11 +155,20 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
       levels = 2 + Math.floor(rng() * 3) * 0.25;
     }
     const height = b.height ?? levels * LEVEL_HEIGHT;
-    const wallColor = palette.walls[Math.floor(rng() * palette.walls.length)] ?? 0xb0a898;
-    const roofColor = palette.roofs[Math.floor(rng() * palette.roofs.length)] ?? 0x6a625a;
+    // "Go-away green": the real park paints its giant show buildings a
+    // muted sage so the eye slides past them — our mega-footprints (the
+    // Toontown/Tomorrowland warehouse slabs that read as red/blue lakes
+    // from above) get the same treatment instead of the land palette.
+    const mega = footprintArea(b) > 1200;
+    const wallColor = mega
+      ? 0x8a9580
+      : (palette.walls[Math.floor(rng() * palette.walls.length)] ?? 0xb0a898);
+    const roofColor = mega
+      ? 0x76846e
+      : (palette.roofs[Math.floor(rng() * palette.roofs.length)] ?? 0x6a625a);
 
     const wallBucket = bucket(wallBuckets, `${style.wall}|${wallColor}`);
-    const storefront = style.storefront && land !== null && height >= 4;
+    const storefront = style.storefront && land !== null && height >= 4 && !mega;
 
     walkEdges(b, height, rng, {
       style,
@@ -574,6 +583,14 @@ function buildSignage(scene: Scene, anchors: readonly SignAnchor[]): void {
  * and kiosks (one low story), small ones are single-story shops.
  */
 function guessLevels(b: BakedBuilding, rng: () => number): number {
+  const area = footprintArea(b);
+  if (area < 25) return 0.9;
+  if (area < 75) return 1.35;
+  return DEFAULT_LEVELS + (rng() > 0.65 ? 1 : 0);
+}
+
+/** Shoelace area of the outer ring, in m². */
+function footprintArea(b: BakedBuilding): number {
   let area = 0;
   const pts = b.outer;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -582,10 +599,7 @@ function guessLevels(b: BakedBuilding, rng: () => number): number {
     if (!a || !c) continue;
     area += (a[0] * c[1] - c[0] * a[1]) / 2;
   }
-  area = Math.abs(area);
-  if (area < 25) return 0.9;
-  if (area < 75) return 1.35;
-  return DEFAULT_LEVELS + (rng() > 0.65 ? 1 : 0);
+  return Math.abs(area);
 }
 
 /** Local non-indexed merge (all buckets share the attribute layout). */

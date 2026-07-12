@@ -152,6 +152,7 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
     height: number,
     body: MeshStandardMaterial,
     cap: MeshStandardMaterial,
+    baseY = 0,
   ): void => {
     const profile = [
       new Vector2(radius * 1.14, 0),
@@ -163,26 +164,26 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
       new Vector2(radius * 1.04, height),
     ];
     const shaft = new Mesh(new LatheGeometry(profile, 14), body);
-    shaft.position.set(tx, 0, tz);
+    shaft.position.set(tx, baseY, tz);
     shaft.castShadow = true;
     castle.add(shaft);
 
     const cone = new Mesh(new ConeGeometry(radius * 1.32, radius * 3.6, 14), cap);
-    cone.position.set(tx, height + radius * 1.8, tz);
+    cone.position.set(tx, baseY + height + radius * 1.8, tz);
     cone.castShadow = true;
     castle.add(cone);
 
     const ring = new Mesh(new TorusGeometry(radius * 1.06, 0.09, 6, 18), gold);
     ring.rotation.x = Math.PI / 2;
-    ring.position.set(tx, height * 0.88, tz);
+    ring.position.set(tx, baseY + height * 0.88, tz);
     castle.add(ring);
 
     const finial = new Mesh(new SphereGeometry(0.2, 8, 8), gold);
-    finial.position.set(tx, height + radius * 3.6, tz);
+    finial.position.set(tx, baseY + height + radius * 3.6, tz);
     castle.add(finial);
 
     const win = new Mesh(new BoxGeometry(0.45, 0.85, 0.1), windowGlow);
-    win.position.set(tx, height * 0.62, tz + radius + 0.06);
+    win.position.set(tx, baseY + height * 0.62, tz + radius + 0.06);
     castle.add(win);
   };
 
@@ -238,7 +239,9 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   castle.add(keepBridge);
 
   // Central signature spire + rear pair.
-  turret(0, -5.5, 2.2, 24, pink, roofDeep);
+  // Central spire sits ON the keep bridge (baseY 17) — at ground level it
+  // stood dead-center in the walk-through corridor and read as a back wall.
+  turret(0, -5.5, 2.2, 14, pink, roofDeep, 17);
   turret(-2.6, -7.5, 1.0, 19, cream, roof);
   turret(2.6, -7.5, 1.0, 19, cream, roof);
 
