@@ -371,10 +371,18 @@ function buildGateway(
   scene.add(g);
 }
 
-function gatewaySign(text: string, fg: string, bg: string, y: number): Mesh {
-  const sign = new Mesh(new PlaneGeometry(7.4, 0.95), signMaterial(text, fg, bg));
-  sign.position.set(0, y, 0.48);
-  return sign;
+function gatewaySign(text: string, fg: string, bg: string, y: number): Group {
+  // One correctly-oriented plane on EACH side of the beam — a single
+  // double-sided plane reads mirrored from the approach direction.
+  const material = signMaterial(text, fg, bg);
+  const g = new Group();
+  for (const side of [-1, 1]) {
+    const sign = new Mesh(new PlaneGeometry(7.4, 0.95), material);
+    sign.position.set(0, y, side * 0.52);
+    sign.rotation.y = side === 1 ? 0 : Math.PI;
+    g.add(sign);
+  }
+  return g;
 }
 
 /** Canvas-text sign material (double-sided, readable both ways). */
