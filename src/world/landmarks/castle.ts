@@ -241,7 +241,9 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   // Central signature spire + rear pair.
   // Central spire sits ON the keep bridge (baseY 17) — at ground level it
   // stood dead-center in the walk-through corridor and read as a back wall.
-  turret(0, -5.5, 2.2, 14, pink, roofDeep, 17);
+  // Central rear spire — HALF its old height (playtest: "looks like a
+  // rocket"); it should crown the silhouette, not dominate it.
+  turret(0, -5.5, 1.7, 7, pink, roofDeep, 17);
   turret(-2.6, -7.5, 1.0, 19, cream, roof);
   turret(2.6, -7.5, 1.0, 19, cream, roof);
 

@@ -32,6 +32,9 @@ export function buildStreetFurniture(scene: Scene, seed: number): void {
   const drinking: Pt[] = [];
   const fountains: Pt[] = [];
   for (const a of PARK_LAYOUT.amenities) {
+    // OSM puts one bench INSIDE the castle walk-through corridor
+    // (x 3.2..8.4) — mid-path furniture reads as an obstacle, skip it.
+    if (a.at[0] > 2.5 && a.at[0] < 9 && a.at[1] > -23 && a.at[1] < 2) continue;
     if (a.kind === "bench") benches.push(a.at);
     else if (a.kind === "drinking_water") drinking.push(a.at);
     else if (a.kind === "fountain") fountains.push(a.at);

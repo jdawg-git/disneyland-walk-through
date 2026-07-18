@@ -14,7 +14,10 @@ import { LANDMARKS, type LandmarkKey } from "../config/landmarks";
 import { PARK_LAYOUT, pointInPolygon, polygonCentroid, type Pt } from "../data/parkLayout";
 import { buildBuildings } from "./buildings";
 import { buildBigThunder } from "./landmarks/bigThunder";
+import { buildCarousel } from "./landmarks/carousel";
 import { buildCastle } from "./landmarks/castle";
+import { buildIndianaJones } from "./landmarks/indianaJones";
+import { buildTreehouse } from "./landmarks/treehouse";
 import { buildHauntedMansion } from "./landmarks/hauntedMansion";
 import { buildMatterhorn } from "./landmarks/matterhorn";
 import { buildPiratesFacade } from "./landmarks/piratesFacade";
@@ -26,6 +29,7 @@ import { buildTrainStation } from "./landmarks/trainStation";
 import { buildIsland } from "./island";
 import { buildProps, type PropPlacements } from "./props";
 import { buildRailroad } from "./railroad";
+import { buildRideVignettes } from "./rides";
 import { buildSteamboat } from "./steamboat";
 import { buildStreetFurniture } from "./streetFurniture";
 import { buildTerrain } from "./terrain";
@@ -42,7 +46,25 @@ const LANDMARK_BUILDERS: Record<LandmarkKey, (scene: Scene, x: number, z: number
   bigThunder: buildBigThunder,
   smallWorld: buildSmallWorld,
   tianasBayou: buildTianasBayou,
+  carousel: buildCarousel,
+  treehouse: buildTreehouse,
+  indianaJones: buildIndianaJones,
 };
+
+/** Ride vignettes + gateways from rides.ts — trees keep clear of these
+ * (they're not LANDMARKS entries, so the landmark exclusion misses them). */
+const VIGNETTE_CLEARINGS: readonly (readonly [number, number, number])[] = [
+  [8, -107, 12], // Dumbo
+  [67, -86, 12], // Mad Tea Party
+  [43.5, -102.8, 9], // Monstro
+  [181, -33, 18], // Nemo lagoon subs + cave rock
+  [-361, 0, 7], // Winnie the Pooh marquee
+  [-34, 92, 8], // Adventureland gateway
+  [-42, 44, 8], // Frontierland gateway
+  [46, 40, 8], // Tomorrowland gateway
+];
+const inVignette = (x: number, z: number): boolean =>
+  VIGNETTE_CLEARINGS.some(([vx, vz, r]) => Math.hypot(x - vx, z - vz) < r);
 
 /** Which tree species each land grows. */
 const TREE_SPECIES: Partial<Record<LandId, "round" | "palm" | "pine">> = {
@@ -89,6 +111,7 @@ export function buildPark(
   buildIsland(scene, seed);
   buildTrain(scene);
   buildSteamboat(scene);
+  buildRideVignettes(scene);
   buildScreening(scene, seed);
 }
 
@@ -197,6 +220,7 @@ function generatePropPlacements(seed: number): PropPlacements {
       if (LANDMARKS.some((l) => Math.hypot(p[0] - l.position[0], p[1] - l.position[1]) < 15)) {
         continue;
       }
+      if (inVignette(p[0], p[1])) continue;
       bucket.push(p);
     }
   }
@@ -309,6 +333,7 @@ function generatePropPlacements(seed: number): PropPlacements {
         if (!overJungle && nearPath(x, z)) continue;
         if (Math.hypot(x - 1, z - 55) < 10) continue; // Partners circle
         if (LANDMARKS.some((l) => Math.hypot(x - l.position[0], z - l.position[1]) < 16)) continue;
+        if (inVignette(x, z)) continue;
         if (inBlocker(x, z)) continue;
         const land = landAt(x, z);
         const keep = KEEP_BY_LAND[land?.id ?? "hub"] ?? 0.85;

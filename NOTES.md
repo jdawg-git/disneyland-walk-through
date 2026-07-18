@@ -403,3 +403,54 @@ Running log of how this project is built and why. Newest decisions at the bottom
   faint dash striping (depth precision); clean at 300 m and at eye level,
   so left alone.
 - 46 tests green; 805 calls / 735k tris at the aerial (budget 1200).
+
+## v6 — Walkthrough notes (25 items from the narrated video)
+
+- INPUT PIPELINE: the user narrated a 20-min walkthrough video; whisper-cpp
+  (brew) transcribed it to timestamped SRT, ffmpeg pulled frames at each
+  comment, and every note was pinned to an exact park location before
+  planning. Transcript quality was excellent — do this again.
+- CONNECTIVITY CONTRACT: WalkableGrid now flood-fills from SPAWN (exported
+  from walkable.ts) and BLOCKS every walkable cell outside the spawn
+  component. Sealed pockets (Tomorrowland's "I'm totally stuck" canyons,
+  Tom Sawyer Island) can no longer be entered; walkableConnectivity.test.ts
+  pins "walkable ⇒ reachable" on a 1 m lattice.
+- RAIL RING EVERYWHERE: railroad.ts + walkable.ts now build from
+  stitchNarrowGaugeRing (the same centerline the train drives) instead of
+  name-filtered raw segments — OSM leaves STATION tracks unnamed, so the
+  entrance stretch had no berm/lintels and the train flew over bare paths.
+- Guest-map culls: phantom cast-member alleys behind both Main Street
+  blocks (SKIP_PATH_IDS), Pixie Hollow ponds pinching the Tomorrowland
+  entry (SKIP_WATER_IDS), the slab WALLING OFF Star Tours↔Buzz (in
+  Anaheim that's the walkway to Space Mountain), 10 Autopia service
+  slabs (the named queue building stays), and Dumbo's 27 RIDE VEHICLES
+  (OSM maps each as a tiny building → the "Stonehenge" ring; culled by
+  micro-footprint radius rule).
+- Pirates facade was showing the promenade its BLANK REAR (same class of
+  bug as v4's Mansion) — half-turned; collider symmetric, no grid change.
+- New builds: Mickey floral on the entrance berm bank (flush disc + face
+  circles + instanced flower speckles; profile synced to BERM_*), land
+  gateways at 3 hub spokes (bamboo/logs/modern + canvas-text signs; yaw
+  solved so beams span the walk direction), Adventureland Treehouse
+  (banyan lathe trunk + canopy blobs + decks; culls the
+  "Disneydendron" column), Indiana Jones temple, carousel (striped
+  per-face-colored canopy + horses), Dumbo elephant spinner, Mad Tea
+  Party cups, Monstro at the canal head (canal's south END — water runs
+  north BEHIND him; face south to guests), Nemo subs + cave rock,
+  Pooh marquee, castle-wall turrets on the Fantasyland dark-ride block.
+- Fantasyland megas: new "tudor" wall texture (dark beams stay opaque,
+  tint warms only plaster) replaces go-away green in this land — the
+  courtyard now reads storybook, not industrial. Roofs slate, not
+  charcoal (aerial got heavy).
+- Refits: castle rear spire HALVED ("looks like a rocket"), drawbridge
+  axis gets hand ribbon segments so ribbon+deck+gate align, corridor
+  bench culled (OSM placed it mid-corridor), Mansion verandas pulled
+  tight to the wings.
+- Texture shimmer ("feedback on that wall"): anisotropy 8 on all tiled
+  canvas textures + the signage atlas — renderer clamps to GPU max.
+- VIGNETTE_CLEARINGS keeps the tree blanket out of non-LANDMARK builds
+  (teacups grew a forest without it). New vignettes need an entry here
+  AND a walkable collider.
+- Verify captures: cameras clip INSIDE canopy blobs easily — if a shot
+  is a wall of dark green, move 3 m before debugging geometry.
+- 49 tests green; 974 calls / 740k tris at the 300 m aerial (budget 1200).

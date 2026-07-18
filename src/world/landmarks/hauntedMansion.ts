@@ -119,27 +119,29 @@ export function buildHauntedMansion(scene: Scene, x: number, z: number): void {
   g.add(fan);
 
   // --- Two-story sage-iron verandas flanking the portico ---
+  // Kept TIGHT to the wall (face ≈ z 8.06): a shallow gallery overhang,
+  // not free-floating balconies (playtest: "so far out from the house").
   for (const side of [-1, 1]) {
     for (const level of [0, 1]) {
       const deckY = level === 0 ? 4.6 : 9.2;
       // Veranda deck slab.
-      const deck = new Mesh(new BoxGeometry(7.6, 0.3, 3.4), white);
-      deck.position.set(side * 7.2, deckY, 9.0);
+      const deck = new Mesh(new BoxGeometry(7.6, 0.3, 1.9), white);
+      deck.position.set(side * 7.2, deckY, 8.85);
       deck.castShadow = true;
       g.add(deck);
       // Filigree rail: a low, half-transparent-reading lattice band.
       const rail = new Mesh(new BoxGeometry(7.4, 1.0, 0.12), sage);
-      rail.position.set(side * 7.2, deckY + 0.85, 10.6);
+      rail.position.set(side * 7.2, deckY + 0.85, 9.72);
       g.add(rail);
       // Slender iron posts with a decorative mid-band.
       for (const px of [-3.4, -1.1, 1.1, 3.4]) {
         const post = new Mesh(new CylinderGeometry(0.09, 0.09, 4.4, 6), sage);
-        post.position.set(side * 7.2 + px, deckY + 2.2, 10.5);
+        post.position.set(side * 7.2 + px, deckY + 2.2, 9.65);
         g.add(post);
       }
       // Filigree frieze hanging below the deck above.
       const frieze = new Mesh(new BoxGeometry(7.4, 0.7, 0.1), sage);
-      frieze.position.set(side * 7.2, deckY + 4.0, 10.5);
+      frieze.position.set(side * 7.2, deckY + 4.0, 9.65);
       g.add(frieze);
     }
   }

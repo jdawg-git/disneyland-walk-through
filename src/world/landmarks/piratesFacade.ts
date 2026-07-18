@@ -16,7 +16,8 @@ import { registerEmissive } from "../../engine/emissive";
  * Pirates of the Caribbean v2 — the New Orleans Square mansion with the
  * signature DOUBLE GALLERY: two stacked rows of real arched openings
  * (extruded walls with arch holes), iron-lace railings, a dormered mansard
- * roof, and warm lantern glow. Faces north (−Z, toward the promenade).
+ * roof, and warm lantern glow. Built facing −Z; the group is half-turned
+ * at placement so the gallery faces the promenade to the SOUTH.
  *
  * Collider contract: box halfW 26 × halfD 7.5 at (−200.2, 190.5).
  */
@@ -130,6 +131,11 @@ export function buildPiratesFacade(scene: Scene, x: number, z: number): void {
     g.add(lamp);
   }
 
+  // v6: the NOS promenade is SOUTH of the footprint (the gray plaza at
+  // z≈200+); built facing −Z, the gallery showed guests its blank rear.
+  // Half-turn puts the double gallery on the walkway. Collider box is
+  // symmetric (halfW 26 × halfD 7.5) — no walkable change needed.
+  g.rotation.y = Math.PI;
   g.position.set(x, 0, z);
   scene.add(g);
 }

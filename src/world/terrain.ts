@@ -15,7 +15,7 @@ import {
 import { registerEmissive } from "../engine/emissive";
 import { registerUpdatable } from "../engine/updatables";
 import { LANDS, landAt } from "../config/lands";
-import { PARK_LAYOUT, pointInPolygon, polygonCentroid } from "../data/parkLayout";
+import { PARK_LAYOUT, pointInPolygon, polygonCentroid, type Pt } from "../data/parkLayout";
 import { rippleTexture } from "./textures";
 import { flatPolygonGeometry, mergeFlatGeometries } from "./shapeUtil";
 
@@ -213,12 +213,25 @@ function buildWalkways(scene: Scene): void {
     normals.push(0, 1, 0);
     uvs.push(0, 0);
   };
+  // Hand segments: the OSM path net aims at the old (misaligned) moat
+  // crossing — these splice the approach INTO the drawbridge axis so the
+  // ribbon, deck, and gate line up (deck: x 5.8, z −3..11, ≈5.4 m wide).
+  const HAND_SEGMENTS: readonly (readonly [Pt, Pt])[] = [
+    [[5.8, 24], [5.8, 10.5]], // hub-side approach → drawbridge south edge
+    [[5.8, -2.5], [5.8, -24]], // gate threshold → corridor → Fantasyland
+  ];
+  const segments: (readonly [Pt, Pt])[] = [...HAND_SEGMENTS];
   for (const path of PARK_LAYOUT.paths) {
     if (path.kind !== "footway" && path.kind !== "pedestrian" && path.kind !== "steps") continue;
     for (let i = 0; i < path.points.length - 1; i++) {
       const a = path.points[i];
       const b = path.points[i + 1];
       if (!a || !b) continue;
+      segments.push([a, b]);
+    }
+  }
+  {
+    for (const [a, b] of segments) {
       const dx = b[0] - a[0];
       const dz = b[1] - a[1];
       const len = Math.hypot(dx, dz);

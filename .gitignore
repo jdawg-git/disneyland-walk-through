@@ -4,3 +4,4 @@ dist/
 .env.local
 verify/
 .DS_Store
+*.mov

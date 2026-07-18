@@ -1,10 +1,16 @@
 import { Vector3 } from "three";
 import { LANDMARKS } from "../config/landmarks";
 import { PARK_LAYOUT, pointInPolygon, type Pt } from "../data/parkLayout";
+import { stitchNarrowGaugeRing } from "../data/railLoop";
 
 const CELL = 0.5; // meters per grid cell
 const PLAYER_RADIUS_CELLS = 1; // obstacle dilation ≈ 0.5 m
 const PATH_HALF_WIDTH = 2.0; // carved walkway ribbon half-width (m)
+
+/** Player spawn — the entrance esplanade. Single source of truth: main.ts
+ * places the camera here and the grid seals every walkable pocket that
+ * cannot be reached on foot from this point. */
+export const SPAWN = { x: 2, z: 338 } as const;
 
 /**
  * Bespoke landmarks do NOT use their OSM footprints for collision — those
@@ -52,6 +58,14 @@ const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
   { kind: "circle", x: -340, z: 79, r: 12 },
   { kind: "circle", x: -355, z: 58, r: 12 },
   { kind: "circle", x: -339, z: 59, r: 9.5 },
+  // v6 vignettes (keep in sync with landmarks/carousel|treehouse|
+  // indianaJones.ts and rides.ts anchors).
+  { kind: "circle", x: 4, z: -76, r: 8.5 }, // King Arthur Carrousel
+  { kind: "circle", x: -146, z: 157, r: 4.5 }, // Adventureland Treehouse
+  { kind: "box", x: -118, z: 168, halfW: 6, halfD: 3.5 }, // Indiana Jones temple
+  { kind: "circle", x: 8, z: -107, r: 7 }, // Dumbo
+  { kind: "circle", x: 67, z: -86, r: 7.5 }, // Mad Tea Party
+  { kind: "circle", x: 43.5, z: -102.8, r: 4.5 }, // Monstro
 ];
 
 /**
@@ -104,12 +118,13 @@ export class WalkableGrid {
     }
     for (const w of PARK_LAYOUT.water) this.fillPolygon(w.outer, 0);
     // 2b. The DLRR berm is solid (railroad.ts renders it) — block a strip
-    //     along the named rail line; path carving below reopens exactly
-    //     the underpass crossings the berm splits open visually.
-    for (const rail of PARK_LAYOUT.railroad) {
-      if (rail.name !== "Disneyland Railroad") continue;
-      this.paintPolyline(rail.points, 3.5, 0);
-    }
+    //     along the STITCHED ring (the same centerline railroad.ts builds
+    //     from and the train drives; raw named segments miss the unnamed
+    //     station stretch). Path carving below reopens exactly the
+    //     underpass crossings the berm splits open visually.
+    const { points: ring } = stitchNarrowGaugeRing(PARK_LAYOUT.railroad);
+    const ringHead = ring[0];
+    if (ringHead && ring.length > 2) this.paintPolyline([...ring, ringHead], 3.5, 0);
     this.dilateBlocked(PLAYER_RADIUS_CELLS);
     // 3. Carve real walkways at full width — bridges + castle corridor —
     //    and pedestrian AREA polygons (plazas/street surfaces).
@@ -128,6 +143,12 @@ export class WalkableGrid {
       if (c.kind === "circle") this.fillCircle(c.x, c.z, c.r);
       else this.fillBox(c.x, c.z, c.halfW, c.halfD);
     }
+    // 6. Seal pockets: any walkable cell not connected to the spawn on foot
+    //    becomes blocked. Playtest showed dead-end canyons between show
+    //    buildings you could slip into (via the resolve() escape hatch) and
+    //    never leave; sealing them means they can't be entered at all. This
+    //    also correctly closes Tom Sawyer Island (raft-only in real life).
+    this.sealUnreachable(SPAWN.x, SPAWN.z);
   }
 
   isWalkable(x: number, z: number): boolean {
@@ -149,8 +170,27 @@ export class WalkableGrid {
     return from.clone();
   }
 
+  /** Block every walkable cell outside the start point's connected
+   * component — after this, walkable ⇒ reachable on foot from spawn. */
+  private sealUnreachable(startX: number, startZ: number): void {
+    const reachable = this.floodFill(startX, startZ);
+    for (let i = 0; i < this.grid.length; i++) {
+      if (this.grid[i] === 1 && reachable[i] === 0) this.grid[i] = 0;
+    }
+  }
+
   /** Flood-fill reachability from a point — used by connectivity tests. */
   reachableFrom(startX: number, startZ: number): (x: number, z: number) => boolean {
+    const visited = this.floodFill(startX, startZ);
+    return (x: number, z: number): boolean => {
+      const c = Math.floor((x - this.minX) / CELL);
+      const r = Math.floor((z - this.minZ) / CELL);
+      if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) return false;
+      return visited[r * this.cols + c] === 1;
+    };
+  }
+
+  private floodFill(startX: number, startZ: number): Uint8Array {
     const startC = Math.floor((startX - this.minX) / CELL);
     const startR = Math.floor((startZ - this.minZ) / CELL);
     const visited = new Uint8Array(this.cols * this.rows);
@@ -176,12 +216,7 @@ export class WalkableGrid {
         }
       }
     }
-    return (x: number, z: number): boolean => {
-      const c = Math.floor((x - this.minX) / CELL);
-      const r = Math.floor((z - this.minZ) / CELL);
-      if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) return false;
-      return visited[idx(r, c)] === 1;
-    };
+    return visited;
   }
 
   private fillPolygon(poly: readonly Pt[], value: 0 | 1): void {

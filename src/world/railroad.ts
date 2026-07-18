@@ -8,6 +8,7 @@ import {
   Vector3,
 } from "three";
 import { PARK_LAYOUT } from "../data/parkLayout";
+import { stitchNarrowGaugeRing } from "../data/railLoop";
 
 /**
  * The berm + Disneyland Railroad loop — the park's visual outer edge.
@@ -43,9 +44,13 @@ export function buildRailroad(
   const abutments: Block[] = [];
   const lintels: Block[] = [];
 
-  for (const rail of PARK_LAYOUT.railroad) {
-    if (rail.name !== "Disneyland Railroad") continue;
-    const pts = rail.points;
+  // The STITCHED ring — the exact centerline the train drives. Building
+  // from raw named segments missed the station stretch (OSM leaves station
+  // tracks unnamed), so the train flew over bare ground at the entrance.
+  const { points: ring } = stitchNarrowGaugeRing(PARK_LAYOUT.railroad);
+  {
+    const head = ring[0];
+    const pts = head && ring.length > 2 ? [...ring, head] : ring; // close the loop
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i];
       const b = pts[i + 1];

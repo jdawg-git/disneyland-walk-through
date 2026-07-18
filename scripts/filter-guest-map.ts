@@ -115,11 +115,48 @@ const SKIP_IDS = new Set<number>([
   // centroid is in Adventureland but which sprawls far OUTSIDE the berm
   // (the aerial's "stray slab"). The map shows only a modest entrance.
   824031782,
+  // v6 walkthrough: the unnamed slab BETWEEN Star Tours and Buzz Lightyear
+  // — in Anaheim that's an open walkway into Tomorrowland, not a wall.
+  371961449,
+  // v6 walkthrough: Autopia reads as a car track with ONE queue building;
+  // OSM's cluster of unnamed service structures cluttered the whole zone
+  // (the named Autopia queue building 168833464 stays).
+  133727770, 133953688, 134713125, 146334830, 146334834, 146334836,
+  191893859, 191893874, 288608886, 316758022,
+]);
+
+/**
+ * Guest-map-phantom walkways (v6 walkthrough): OSM traces cast-member
+ * routes behind both Main Street blocks; the guest map shows no opening
+ * there. Culling them removes the walkable carve AND the tan ribbon.
+ */
+const SKIP_PATH_IDS = new Set<number>([
+  // West alley behind the Emporium block + its backstage door stubs.
+  384305677, 563788122, 617915226, 130219718, 130219729, 136352886,
+  151099927, 151099942, 156766158, 156766166, 301206248, 1409618625,
+  1409618627, 1409618628, 1409618629, 1409622503, 1473988282,
+  // East-side gap north of Town Square ("that's not an opening").
+  310706962, 384305678, 358814103, 136353325,
+]);
+
+/** Ponds the walkthrough flagged as pinching the Tomorrowland entrance. */
+const SKIP_WATER_IDS = new Set<number>([
+  157975863, // Pixie Hollow Lagoon — crowds the entry walkway
+  139512951, // unnamed pond just north of it, same pinch
 ]);
 
 const dropped: Record<string, number> = {};
 const drop = (bucket: string): void => {
   dropped[bucket] = (dropped[bucket] ?? 0) + 1;
+};
+
+/** Polygon area (m²) for the micro-footprint cull below. */
+const polyArea = (pts: readonly Pt[]): number => {
+  let a = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    a += ((pts[j]?.[0] ?? 0) + (pts[i]?.[0] ?? 0)) * ((pts[j]?.[1] ?? 0) - (pts[i]?.[1] ?? 0));
+  }
+  return Math.abs(a / 2);
 };
 
 const buildings = raw.buildings
@@ -131,6 +168,14 @@ const buildings = raw.buildings
     }
     if (SKIP_IDS.has(b.id)) {
       drop("building:skiplist");
+      return false;
+    }
+    // Dumbo the Flying Elephant: OSM maps every RIDE VEHICLE as its own
+    // tiny building — extruded, they read as a Stonehenge ring around the
+    // spinner. Drop micro-footprints near the Dumbo anchor (8, -107); the
+    // bespoke elephant spinner in rides.ts replaces them.
+    if (polyArea(b.outer) < 40 && Math.hypot(cx - 8, cz + 107) < 16) {
+      drop("building:dumbo-vehicle");
       return false;
     }
     if (b.name && !KEEP_NAMES.has(b.name) && BACKSTAGE_NAME.test(b.name)) {
@@ -145,6 +190,10 @@ const buildings = raw.buildings
 // backstage; a crossing path splits into its inside pieces.
 const paths: RawLayout["paths"] = [];
 for (const p of raw.paths) {
+  if (SKIP_PATH_IDS.has(p.id)) {
+    drop("path:skiplist");
+    continue;
+  }
   let run: Pt[] = [];
   const flush = (): void => {
     if (run.length >= 2) paths.push({ id: p.id, kind: p.kind, points: run });
@@ -162,6 +211,10 @@ const water = raw.water.filter((w) => {
   // Backstage ride-vehicle storage ponds — never on the guest map.
   if (w.name !== undefined && /boat storage/i.test(w.name)) {
     drop("water:backstage");
+    return false;
+  }
+  if (SKIP_WATER_IDS.has(w.id)) {
+    drop("water:skiplist");
     return false;
   }
   const [cx, cz] = centroid(w.outer);

@@ -15,7 +15,10 @@ export type LandmarkKey =
   | "hauntedMansion"
   | "bigThunder"
   | "smallWorld"
-  | "tianasBayou";
+  | "tianasBayou"
+  | "carousel"
+  | "treehouse"
+  | "indianaJones";
 
 export interface LandmarkDef {
   readonly key: LandmarkKey;
@@ -38,4 +41,13 @@ export const LANDMARKS: readonly LandmarkDef[] = [
   // becomes the bespoke green mountain); clear of star 7 at (-370, 40).
   // The builder rotates the group so the flume drop faces the river.
   { key: "tianasBayou", osmIds: [361504826], position: [-348, 68] },
+  // v6 walkthrough: the round OSM slab becomes a real carousel.
+  { key: "carousel", osmIds: [129691054], position: [4, -76] },
+  // "Disneydendron semperflorens grandis" — the Adventureland Treehouse's
+  // fictional tree species; its thin extrusion read as a green column.
+  { key: "treehouse", osmIds: [128480616], position: [-146, 157] },
+  // Indiana Jones Adventure temple — no OSM footprint survives the cull
+  // (show building 824031782 is skip-listed); bespoke facade only, placed
+  // off the jungle trail near the Raiders truck prop.
+  { key: "indianaJones", osmIds: [], position: [-118, 168] },
 ];

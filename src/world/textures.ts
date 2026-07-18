@@ -35,14 +35,34 @@ function tiled(name: string, draw: (ctx: CanvasRenderingContext2D) => void): Can
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
+  // Kill the glancing-angle moiré ("feedback") on long facades — the
+  // renderer clamps to the GPU's max anisotropy, so 8 is always safe.
+  texture.anisotropy = 8;
   tileCache.set(name, texture);
   return texture;
 }
 
-export type WallKind = "brick" | "clapboard" | "plaster" | "board" | "panel";
+export type WallKind = "brick" | "clapboard" | "plaster" | "board" | "panel" | "tudor";
 
 export function wallTexture(kind: WallKind): CanvasTexture {
   switch (kind) {
+    case "tudor":
+      // Half-timber: light plaster field with DARK oak beams — verticals,
+      // a sill band, and a diagonal brace per tile (beams drawn dark and
+      // opaque so the material tint only warms the plaster).
+      return tiled("tudor", (ctx) => {
+        ctx.fillStyle = "#e8e2d4";
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillStyle = "#4a3826";
+        for (const x of [0, 84, 168, 248]) ctx.fillRect(x, 0, 8, 256);
+        ctx.fillRect(0, 120, 256, 10); // sill band
+        ctx.fillRect(0, 248, 256, 8); // base band
+        ctx.save(); // diagonal brace in the middle bay
+        ctx.translate(126, 190);
+        ctx.rotate(0.6);
+        ctx.fillRect(-70, -4, 140, 8);
+        ctx.restore();
+      });
     case "brick":
       return tiled("brick", (ctx) => {
         ctx.fillStyle = "#cfcac4"; // mortar
@@ -150,6 +170,7 @@ export function storefrontTexture(): CanvasTexture {
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
+  texture.anisotropy = 8;
   storefrontCache = texture;
   return texture;
 }

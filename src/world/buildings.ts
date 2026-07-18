@@ -160,14 +160,23 @@ export function buildBuildings(scene: Scene, options: BuildingsOptions): void {
     // Toontown/Tomorrowland warehouse slabs that read as red/blue lakes
     // from above) get the same treatment instead of the land palette.
     const mega = footprintArea(b) > 1200;
-    const wallColor = mega
-      ? 0x8a9580
-      : (palette.walls[Math.floor(rng() * palette.walls.length)] ?? 0xb0a898);
-    const roofColor = mega
-      ? 0x76846e
-      : (palette.roofs[Math.floor(rng() * palette.roofs.length)] ?? 0x6a625a);
+    // Fantasyland's mega show buildings ring the castle courtyard — in
+    // Anaheim they wear TUDOR facades, not warehouse sage ("too
+    // industrial" in the walkthrough). Everywhere else megas go-away.
+    const tudor = mega && land?.id === "fantasyland";
+    const wallColor = tudor
+      ? 0xf0e6d2
+      : mega
+        ? 0x8a9580
+        : (palette.walls[Math.floor(rng() * palette.walls.length)] ?? 0xb0a898);
+    const roofColor = tudor
+      ? 0x736b78
+      : mega
+        ? 0x76846e
+        : (palette.roofs[Math.floor(rng() * palette.roofs.length)] ?? 0x6a625a);
 
-    const wallBucket = bucket(wallBuckets, `${style.wall}|${wallColor}`);
+    const wallKind = tudor ? "tudor" : style.wall;
+    const wallBucket = bucket(wallBuckets, `${wallKind}|${wallColor}`);
     const storefront = style.storefront && land !== null && height >= 4 && !mega;
 
     walkEdges(b, height, rng, {
@@ -534,6 +543,7 @@ function buildSignage(scene: Scene, anchors: readonly SignAnchor[]): void {
 
   const atlas = new CanvasTexture(canvas);
   atlas.colorSpace = SRGBColorSpace;
+  atlas.anisotropy = 8; // sign text stays crisp at oblique view angles
   const material = new MeshStandardMaterial({ map: atlas, roughness: 0.8, side: DoubleSide });
 
   const positions: number[] = [];

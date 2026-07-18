@@ -16,7 +16,7 @@ import { ScavengerSystem } from "./systems/scavenger";
 import { ZoneTracker } from "./systems/zoneTracker";
 import { CrowdSystem } from "./world/crowd";
 import { buildPark } from "./world/parkBuilder";
-import { WalkableGrid } from "./world/walkable";
+import { SPAWN, WalkableGrid } from "./world/walkable";
 import { createHud } from "./ui/hud";
 import { createStartOverlay } from "./ui/overlay";
 
@@ -81,10 +81,8 @@ function boot(p: AppParams): void {
   // Applied after scene build so registered emissive materials pick it up.
   if (p.time) dayNight.setTime(p.time, true);
 
-  // Spawn: the entrance esplanade, outside the gate, facing the station —
-  // you arrive at the park the way real guests do.
-  const SPAWN = { x: 2, z: 338 };
-
+  // Spawn: the entrance esplanade (shared with the walkable grid, which
+  // seals every pocket unreachable from it) — you arrive like a real guest.
   let controlsUpdate: (dt: number) => void = () => {};
   if (p.cam) {
     applyDebugCamera(bundle.camera, p.cam);
