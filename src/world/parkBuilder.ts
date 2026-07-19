@@ -56,11 +56,12 @@ const LANDMARK_BUILDERS: Record<LandmarkKey, (scene: Scene, x: number, z: number
 const VIGNETTE_CLEARINGS: readonly (readonly [number, number, number])[] = [
   [8, -107, 12], // Dumbo
   [67, -86, 12], // Mad Tea Party
-  [43.5, -102.8, 9], // Monstro
+  [42.8, -102.5, 9], // Monstro
   [181, -33, 18], // Nemo lagoon subs + cave rock
-  [-361, 0, 7], // Winnie the Pooh marquee
+  [-362, 18, 9], // Winnie the Pooh lodge
+  [60, 32, 9], // Astro Orbitor
   [-34, 92, 8], // Adventureland gateway
-  [-42, 44, 8], // Frontierland gateway
+  [-49.5, 67, 8], // Frontierland gateway (west end of the entrance bridge)
   [46, 40, 8], // Tomorrowland gateway
 ];
 const inVignette = (x: number, z: number): boolean =>

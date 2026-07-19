@@ -62,10 +62,12 @@ const LANDMARK_COLLIDERS: readonly LandmarkCollider[] = [
   // indianaJones.ts and rides.ts anchors).
   { kind: "circle", x: 4, z: -76, r: 8.5 }, // King Arthur Carrousel
   { kind: "circle", x: -146, z: 157, r: 4.5 }, // Adventureland Treehouse
-  { kind: "box", x: -118, z: 168, halfW: 6, halfD: 3.5 }, // Indiana Jones temple
+  { kind: "circle", x: -145, z: 190, r: 7.5 }, // Indiana Jones temple (rotated — circle covers it)
   { kind: "circle", x: 8, z: -107, r: 7 }, // Dumbo
   { kind: "circle", x: 67, z: -86, r: 7.5 }, // Mad Tea Party
-  { kind: "circle", x: 43.5, z: -102.8, r: 4.5 }, // Monstro
+  { kind: "circle", x: 42.8, z: -102.5, r: 4.5 }, // Monstro
+  { kind: "box", x: -362, z: 18, halfW: 5, halfD: 3.2 }, // Winnie the Pooh lodge
+  { kind: "circle", x: 60, z: 32, r: 4.6 }, // Astro Orbitor
 ];
 
 /**

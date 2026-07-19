@@ -33,7 +33,9 @@ export const LANDMARKS: readonly LandmarkDef[] = [
   { key: "matterhorn", osmIds: [107280556], position: [109, -38.8] },
   { key: "spaceMountain", osmIds: [372931495], position: [151, 162] },
   { key: "tikiRoom", osmIds: [653252856], position: [-53.2, 114.3] },
-  { key: "piratesFacade", osmIds: [824031784], position: [-200.2, 190.5] },
+  // 11281957 is the giant unnamed NOS/Pirates show-building slab whose
+  // go-away-green walls swallowed the bespoke gallery facade entirely.
+  { key: "piratesFacade", osmIds: [824031784, 11281957], position: [-200.2, 190.5] },
   { key: "hauntedMansion", osmIds: [178254960], position: [-301.8, 120.2] },
   { key: "bigThunder", osmIds: [266074156], position: [-124.2, 3.8] },
   { key: "smallWorld", osmIds: [499783300], position: [114.3, -247.7] },
@@ -47,7 +49,7 @@ export const LANDMARKS: readonly LandmarkDef[] = [
   // fictional tree species; its thin extrusion read as a green column.
   { key: "treehouse", osmIds: [128480616], position: [-146, 157] },
   // Indiana Jones Adventure temple — no OSM footprint survives the cull
-  // (show building 824031782 is skip-listed); bespoke facade only, placed
-  // off the jungle trail near the Raiders truck prop.
-  { key: "indianaJones", osmIds: [], position: [-118, 168] },
+  // (show building 824031782 is skip-listed); bespoke facade at the DEEP
+  // end of the jungle trail loop (playtest: "further down the path").
+  { key: "indianaJones", osmIds: [], position: [-145, 190] },
 ];

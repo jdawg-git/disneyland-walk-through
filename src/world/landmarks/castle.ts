@@ -231,8 +231,11 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   // ---------------------------------------------------------------------
   // Rear keep: twin towers + high bridge (corridor passes beneath).
   // ---------------------------------------------------------------------
-  turret(-4, -5.5, 1.9, 13.5, pinkDeep, roofDeep);
-  turret(4, -5.5, 1.9, 13.5, pinkDeep, roofDeep);
+  // Keep towers OUTBOARD of the corridor (local ±2.6 is the corridor
+  // edge): at ±4 their r-1.9 shafts bulged half a meter into the walk
+  // ("pathway is too tight").
+  turret(-4.8, -5.5, 1.9, 13.5, pinkDeep, roofDeep);
+  turret(4.8, -5.5, 1.9, 13.5, pinkDeep, roofDeep);
   const keepBridge = new Mesh(new BoxGeometry(4.5, 5, 7), pinkDeep);
   keepBridge.position.set(0, 14.5, -5.5);
   keepBridge.castShadow = true;
@@ -244,8 +247,10 @@ export function buildCastle(scene: Scene, x: number, z: number): void {
   // Central rear spire — HALF its old height (playtest: "looks like a
   // rocket"); it should crown the silhouette, not dominate it.
   turret(0, -5.5, 1.7, 7, pink, roofDeep, 17);
-  turret(-2.6, -7.5, 1.0, 19, cream, roof);
-  turret(2.6, -7.5, 1.0, 19, cream, roof);
+  // Rear cream spires were CENTERED on the corridor edges (±2.6) —
+  // their full radius hung into the walkway. Moved clear.
+  turret(-4.0, -7.5, 1.0, 19, cream, roof);
+  turret(4.0, -7.5, 1.0, 19, cream, roof);
 
   // ---------------------------------------------------------------------
   // Pennant flags on the three tallest spires — waving via updatable.

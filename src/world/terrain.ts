@@ -170,12 +170,14 @@ function buildBridgeDecks(scene: Scene): void {
       });
     }
   }
-  // Drawbridge: north-south deck dead-center on the corridor, spanning the
-  // moat in front of the gate (castle south face ≈ z −1; moat to z ≈ 9).
+  // Drawbridge: north-south deck dead-center on the corridor. Spans from
+  // ONTO the south plaza (z 15, past the water's edge) through the moat
+  // to the gate threshold (z −4) — playtest showed a water gap where the
+  // old 14 m deck stopped short of the bank.
   decks.push({
-    mid: new Vector3(CASTLE_BRIDGE.x, 0.17, CASTLE_BRIDGE.z),
+    mid: new Vector3(CASTLE_BRIDGE.x, 0.17, 5.5),
     yaw: Math.PI / 2, // unit-x box turned to run north-south
-    length: 14,
+    length: 19,
     width: 1.6, // ≈5.4 m — matches the 5 m corridor
   });
   if (decks.length === 0) return;

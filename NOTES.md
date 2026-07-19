@@ -454,3 +454,35 @@ Running log of how this project is built and why. Newest decisions at the bottom
 - Verify captures: cameras clip INSIDE canopy blobs easily — if a shot
   is a wall of dark green, move 3 m before debugging geometry.
 - 49 tests green; 974 calls / 740k tris at the 300 m aerial (budget 1200).
+
+## v7 — Screenshot punch list (12 items)
+
+- Pirates: the "big green building" was unnamed slab 11281957 (73×48 m!)
+  whose go-away walls SWALLOWED the bespoke gallery — culled via the
+  piratesFacade osmIds. Lesson: when a landmark looks "removed", check
+  whether a mega is enveloping it before touching the landmark.
+- Pooh: the Critter trail runs z≈24..29 (probe the PATH POLYLINES before
+  placing trailside props — the marquee sat 25 m off in a field). Now a
+  honey-gold entrance LODGE on the trail, sign across the gable.
+- Indiana Jones v2: stepped pointy tower (6 leaning tiers + 4-sided
+  spire), cobra pillars, rubble, gold lintel — moved to the deep end of
+  the jungle trail loop (-145,190), facing the northeast approach.
+- Frontierland gateway now stands at the west end of the entrance
+  FOOTBRIDGE (-49.5,67) — the probe found the real bridge segment.
+- Drawbridge deck lengthened 14→19 m (mid z 5.5): it stopped short of
+  the south bank leaving a water gap.
+- Castle corridor: the rear cream spires were CENTERED on the corridor
+  edges and the keep towers bulged in — both moved outboard. The worst
+  offender was rides.ts's own castle-wall turret at (7,-18): colliderless
+  and mid-walkway. Corner turret now at (9.5,-17.5).
+- Monstro faces UP the canal (rotation -0.35) — the river flows into his
+  jaws; you meet his back from the teacups, his face from the water.
+- Nemo subs CRUISE: registerUpdatable elliptical orbit (rx 12/rz 8.5,
+  ~1 lap/min, bobbing); Astro Orbitor rockets fly the same way. Note
+  freeze=1 still runs 3 frames, so screenshots get posed positions.
+- Tomorrowland corridor marquees: STAR TOURS (north wall face) + BUZZ
+  LIGHTYEAR ASTRO BLASTERS (south wall face) at y 5.
+- Astro Orbitor at (60,32) by the Tomorrowland gateway: stacked base,
+  tilted gold orbit rings, 6 red rockets animated on a climb-and-dive.
+- 49 tests green throughout; colliders + VIGNETTE_CLEARINGS synced for
+  every moved/new piece.

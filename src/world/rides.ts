@@ -15,6 +15,7 @@ import {
   SRGBColorSpace,
   TorusGeometry,
 } from "three";
+import { registerUpdatable } from "../engine/updatables";
 
 /**
  * v6 walkthrough set: small bespoke ride vignettes + land-entry gateways.
@@ -29,16 +30,19 @@ const CUP_COLORS = [0xe86a9a, 0x6ab0e8, 0xf0c04a, 0x9a6ae8, 0x62c48a, 0xe88a5a];
 export function buildRideVignettes(scene: Scene): void {
   buildDumbo(scene, 8, -107);
   buildTeacups(scene, 67, -86);
-  buildMonstro(scene, 43.5, -102.8);
+  buildMonstro(scene, 42.8, -102.5);
   buildSubLagoon(scene, 181, -33);
-  buildPoohMarquee(scene, -361, 0);
+  buildPoohLodge(scene, -362, 18);
+  buildAstroOrbitor(scene, 60, 32);
+  buildTomorrowlandMarquees(scene);
 
   buildCastleWallTurrets(scene);
 
-  // Land gateways at the hub spoke mouths, beams spanning ACROSS the
-  // walkway (yaw solved so local +X ⊥ the hub→land walk direction).
+  // Land gateways, beams spanning ACROSS the walkway (yaw solved so
+  // local +X ⊥ the walk direction). Frontierland's gate stands at the
+  // west end of the entrance FOOTBRIDGE over the moat run (−44, 67).
   buildGateway(scene, -34, 92, -1.07, "ADVENTURELAND", "bamboo");
-  buildGateway(scene, -42, 44, 1.27, "FRONTIERLAND", "logs");
+  buildGateway(scene, -49.5, 67, -Math.PI / 2, "FRONTIERLAND", "logs");
   buildGateway(scene, 46, 40, -1.3, "TOMORROWLAND", "modern");
 }
 
@@ -185,26 +189,23 @@ function buildMonstro(scene: Scene, x: number, z: number): void {
   fluke.rotation.z = 0.5;
   g.add(fluke);
 
-  // Sits at the canal head (which is the canal's SOUTH end; the water
-  // runs north behind him) facing south-southeast, so guests coming from
-  // the teacups meet his open jaws and the canal reads as ending in them.
-  g.rotation.y = Math.PI - 0.35;
+  // Jaws face NORTH, straight up the canal — the river visibly flows
+  // INTO his mouth (the canal head is just north; water runs on north).
+  // The slight angle keeps one eye visible from the teacups approach.
+  g.rotation.y = -0.35;
   g.position.set(x, 0, z);
   scene.add(g);
 }
 
-/** Finding Nemo lagoon: yellow subs + a cave-arched rock the subs dive into. */
+/** Finding Nemo lagoon: yellow subs CRUISING the lagoon + a cave rock. */
 function buildSubLagoon(scene: Scene, x: number, z: number): void {
   const g = new Group();
   const yellow = new MeshStandardMaterial({ color: 0xf0c018, roughness: 0.55 });
   const rock = new MeshStandardMaterial({ color: 0x8a8474, roughness: 1, flatShading: true });
   const dark = new MeshStandardMaterial({ color: 0x0c1418, roughness: 1 });
 
-  for (const [sx, sz, yaw] of [
-    [-8, 6, 0.5],
-    [4, -2, 2.4],
-    [10, 10, 4.2],
-  ] as const) {
+  const subs: Group[] = [];
+  for (let i = 0; i < 3; i++) {
     const sub = new Group();
     const hull = new Mesh(new CapsuleGeometry(0.95, 4.4, 4, 10), yellow);
     hull.rotation.z = Math.PI / 2;
@@ -220,10 +221,27 @@ function buildSubLagoon(scene: Scene, x: number, z: number): void {
       port.position.set(p * 1.3, 0.35, 0.85);
       sub.add(port);
     }
-    sub.position.set(sx, 0.55, sz);
-    sub.rotation.y = yaw;
     g.add(sub);
+    subs.push(sub);
   }
+
+  // Slow counter-clockwise cruise around the lagoon, evenly spaced, with
+  // a gentle bob — the hull's +X nose points along the direction of travel.
+  const ORBIT_RX = 12;
+  const ORBIT_RZ = 8.5;
+  const SPEED = 0.12; // rad/s ≈ one lap per minute
+  registerUpdatable((_dt, time) => {
+    subs.forEach((sub, i) => {
+      const a = time * SPEED + (i / subs.length) * Math.PI * 2;
+      sub.position.set(
+        Math.cos(a) * ORBIT_RX,
+        0.55 + Math.sin(time * 0.8 + i * 2.1) * 0.12,
+        Math.sin(a) * ORBIT_RZ,
+      );
+      // Tangent of the ellipse: d/da (cos·rx, sin·rz) = (−sin·rx, cos·rz).
+      sub.rotation.y = Math.atan2(-(Math.cos(a) * ORBIT_RZ), -Math.sin(a) * ORBIT_RX);
+    });
+  });
 
   // Cave rock at the lagoon's north edge.
   const mound = new Mesh(new DodecahedronGeometry(6.5, 1), rock);
@@ -246,34 +264,154 @@ function buildSubLagoon(scene: Scene, x: number, z: number): void {
   scene.add(g);
 }
 
-/** Winnie the Pooh marquee in front of the ride's show building. */
-function buildPoohMarquee(scene: Scene, x: number, z: number): void {
+/**
+ * Winnie the Pooh entrance lodge ON the Critter trail (the trail runs
+ * z≈24..29 here) — a honey-gold woodland gable like the real ride's
+ * entrance canopy, with the name board across the front and a giant
+ * honey pot. Faces SOUTH (+Z) toward the trail.
+ */
+function buildPoohLodge(scene: Scene, x: number, z: number): void {
   const g = new Group();
   const honey = new MeshStandardMaterial({ color: 0xe8a830, roughness: 0.7 });
   const wood = new MeshStandardMaterial({ color: 0x7a5230, roughness: 0.95 });
+  const shingle = new MeshStandardMaterial({ color: 0x9a6a3a, roughness: 0.9 });
 
+  // Timber lodge body with a steep gable.
+  const body = new Mesh(new BoxGeometry(9, 4.2, 5), wood);
+  body.position.y = 2.1;
+  body.castShadow = true;
+  g.add(body);
+  const gable = new ConeGeometry(Math.SQRT2 / 2, 1, 4);
+  gable.rotateY(Math.PI / 4);
+  const roof = new Mesh(gable, shingle);
+  roof.scale.set(10.4, 3, 6.2);
+  roof.position.y = 4.2 + 1.5;
+  roof.castShadow = true;
+  g.add(roof);
+
+  // Dark entry + timber posts on the trail side.
+  const dark = new MeshStandardMaterial({ color: 0x241a10, roughness: 1 });
+  const door = new Mesh(new BoxGeometry(2.4, 3.0, 0.4), dark);
+  door.position.set(0, 1.5, 2.55);
+  g.add(door);
   for (const side of [-1, 1]) {
-    const post = new Mesh(new BoxGeometry(0.35, 3.4, 0.35), wood);
-    post.position.set(0, 1.7, side * 2.6);
+    const post = new Mesh(new BoxGeometry(0.4, 3.6, 0.4), wood);
+    post.position.set(side * 3.4, 1.8, 2.7);
     g.add(post);
   }
-  const board = new Mesh(new BoxGeometry(0.25, 1.6, 6.0), honey);
-  board.position.y = 3.2;
-  g.add(board);
+
+  // Name board across the gable front + giant honey pot beside the door.
   const sign = new Mesh(
-    new PlaneGeometry(5.6, 1.3),
+    new PlaneGeometry(7.2, 1.35),
     signMaterial("The Many Adventures\nof Winnie the Pooh", "#5a3a14", "#f6dfa0"),
   );
-  sign.position.set(0.14, 3.2, 0);
-  sign.rotation.y = Math.PI / 2;
+  sign.position.set(0, 3.5, 2.56);
   g.add(sign);
-  // Honey pot on top.
-  const pot = new Mesh(new CylinderGeometry(0.5, 0.38, 0.7, 10), honey);
-  pot.position.y = 4.35;
+  const pot = new Mesh(new CylinderGeometry(0.9, 0.7, 1.3, 12), honey);
+  pot.position.set(4.6, 0.65, 2.4);
   g.add(pot);
+  const potLid = new Mesh(new CylinderGeometry(0.95, 0.95, 0.22, 12), wood);
+  potLid.position.set(4.6, 1.4, 2.4);
+  g.add(potLid);
 
   g.position.set(x, 0, z);
   scene.add(g);
+}
+
+/**
+ * Astro Orbitor at the Tomorrowland gateway: retro-futurist spinner —
+ * stacked base, central spire, three tilted orbit rings, and rocket
+ * ships that actually FLY around it.
+ */
+function buildAstroOrbitor(scene: Scene, x: number, z: number): void {
+  const g = new Group();
+  const white = new MeshStandardMaterial({ color: 0xe8ecf2, roughness: 0.4, metalness: 0.3 });
+  const red = new MeshStandardMaterial({ color: 0xd84040, roughness: 0.6 });
+  const gold = new MeshStandardMaterial({ color: 0xd8a838, roughness: 0.5, metalness: 0.4 });
+  const blue = new MeshStandardMaterial({ color: 0x3878c8, roughness: 0.5 });
+
+  const base = new Mesh(new CylinderGeometry(3.4, 4.2, 1.6, 14), white);
+  base.position.y = 0.8;
+  base.receiveShadow = true;
+  g.add(base);
+  const column = new Mesh(new CylinderGeometry(0.9, 1.2, 7, 10), blue);
+  column.position.y = 1.6 + 3.5;
+  g.add(column);
+  const finial = new Mesh(new ConeGeometry(0.7, 2.2, 8), gold);
+  finial.position.y = 9.8;
+  g.add(finial);
+
+  // Tilted orbit rings around the column.
+  for (const [ry, tilt, r] of [
+    [5.2, 0.5, 3.4],
+    [6.4, -0.4, 2.9],
+    [7.6, 0.25, 2.4],
+  ] as const) {
+    const ring = new Mesh(new TorusGeometry(r, 0.12, 6, 24), gold);
+    ring.rotation.x = Math.PI / 2 + tilt;
+    ring.position.y = ry;
+    g.add(ring);
+  }
+
+  // Rockets on arms, spinning with a gentle climb-and-dive.
+  const rockets: Group[] = [];
+  for (let i = 0; i < 6; i++) {
+    const rocket = new Group();
+    const bodyMesh = new Mesh(new CapsuleGeometry(0.45, 1.9, 4, 8), red);
+    bodyMesh.rotation.z = Math.PI / 2;
+    rocket.add(bodyMesh);
+    const nose = new Mesh(new ConeGeometry(0.35, 0.8, 8), white);
+    nose.rotation.z = -Math.PI / 2;
+    nose.position.x = 1.6;
+    rocket.add(nose);
+    for (const side of [-1, 1]) {
+      const fin = new Mesh(new BoxGeometry(0.7, 0.5, 0.08), white);
+      fin.position.set(-0.9, 0.1, side * 0.4);
+      rocket.add(fin);
+    }
+    g.add(rocket);
+    rockets.push(rocket);
+  }
+  registerUpdatable((_dt, time) => {
+    rockets.forEach((rocket, i) => {
+      const a = time * 0.55 + (i / rockets.length) * Math.PI * 2;
+      const R = 4.6;
+      rocket.position.set(Math.cos(a) * R, 5.6 + Math.sin(a * 2 + i) * 0.8, Math.sin(a) * R);
+      rocket.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a));
+      rocket.rotation.z = Math.sin(a * 2 + i) * 0.18;
+    });
+  });
+
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+
+/**
+ * Wall marquees for the Tomorrowland corridor: Star Tours' south wall
+ * (z≈72) and Buzz Lightyear's north wall (z≈59) flank the walkway to
+ * Space Mountain — name boards make the corridor legible.
+ */
+function buildTomorrowlandMarquees(scene: Scene): void {
+  const marquee = (
+    text: string,
+    mx: number,
+    mz: number,
+    faceNorth: boolean,
+    fg: string,
+    bg: string,
+  ): void => {
+    const g = new Group();
+    const board = new Mesh(new BoxGeometry(9, 1.7, 0.3), new MeshStandardMaterial({ color: 0x2a3240, roughness: 0.7 }));
+    g.add(board);
+    const sign = new Mesh(new PlaneGeometry(8.6, 1.4), signMaterial(text, fg, bg));
+    sign.position.z = faceNorth ? -0.18 : 0.18;
+    if (faceNorth) sign.rotation.y = Math.PI;
+    g.add(sign);
+    g.position.set(mx, 5, mz);
+    scene.add(g);
+  };
+  marquee("STAR TOURS", 115, 71.6, true, "#ffffff", "#1a2a4e");
+  marquee("BUZZ LIGHTYEAR ASTRO BLASTERS", 118, 59.4, false, "#123a6e", "#a8e858");
 }
 
 /**
@@ -285,7 +423,9 @@ function buildCastleWallTurrets(scene: Scene): void {
   const stone = new MeshStandardMaterial({ color: 0x8f9aac, roughness: 0.9 });
   const roofBlue = new MeshStandardMaterial({ color: 0x2f55c2, roughness: 0.6 });
   for (const [tx, tz] of [
-    [7, -18],
+    // NOT (7,−18): the castle corridor exits through x 3.2..8.4 up to
+    // z≈−23 — a turret there stood mid-walkway. Corner sits east of it.
+    [9.5, -17.5],
     [7, -48],
     [7, -78],
     [36, -17],

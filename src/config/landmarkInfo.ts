@@ -137,9 +137,9 @@ export const LANDMARK_POIS: readonly LandmarkPoi[] = [
     name: "Indiana Jones Adventure",
     land: "Adventureland",
     blurb: "Brave the Temple of the Forbidden Eye — don't look into its eyes.",
-    x: -118,
-    y: 4,
-    z: 168,
+    x: -145,
+    y: 6,
+    z: 190,
     range: 45,
   },
   {
