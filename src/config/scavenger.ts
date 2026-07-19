@@ -44,7 +44,9 @@ export const STARS: readonly StarDef[] = [
   },
   {
     id: 6,
-    position: [-299, 1.4, 145],
+    // ON the mansion's front lawn (it faces EAST since v4) — visible from
+    // the promenade; the old spot (-299,145) sat in dense canopy.
+    position: [-288, 1.4, 126],
     clue: "A little further west a ghostly white manor waits on the hill — its foolish mortals never check the front lawn.",
   },
   {

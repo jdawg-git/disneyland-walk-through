@@ -17,7 +17,7 @@ import { mulberry32, type Rng } from "../engine/random";
 
 const WAYPOINT_SPACING = 9; // meters between candidate waypoints on paths
 const NEIGHBOR_RADIUS = 55; // how far a group roams for its next target
-const EARS_RATE = 0.1; // 1 in 10 guests wears Mickey ears
+const EARS_RATE = 0.4; // 2 in 5 guests wear Mickey ears
 
 // Guest sizes: [scale, weight]. Children small, teens mid, adults full.
 const SIZES: readonly (readonly [number, number])[] = [

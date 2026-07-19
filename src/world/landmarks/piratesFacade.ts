@@ -131,11 +131,10 @@ export function buildPiratesFacade(scene: Scene, x: number, z: number): void {
     g.add(lamp);
   }
 
-  // v6: the NOS promenade is SOUTH of the footprint (the gray plaza at
-  // z≈200+); built facing −Z, the gallery showed guests its blank rear.
-  // Half-turn puts the double gallery on the walkway. Collider box is
-  // symmetric (halfW 26 × halfD 7.5) — no walkable change needed.
-  g.rotation.y = Math.PI;
+  // v7: guests actually approach along ROYAL STREET on the NORTH side
+  // (the v6 half-turn assumed the south plaza was the promenade — once
+  // the enveloping show-building slab was culled, playtest showed the
+  // walkway runs north and got the blank rear). Face north as built.
   g.position.set(x, 0, z);
   scene.add(g);
 }

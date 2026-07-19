@@ -10,6 +10,7 @@ import {
 } from "three";
 import { mulberry32, type Rng } from "../engine/random";
 import { landAt, type LandId } from "../config/lands";
+import { STARS } from "../config/scavenger";
 import { LANDMARKS, type LandmarkKey } from "../config/landmarks";
 import { PARK_LAYOUT, pointInPolygon, polygonCentroid, type Pt } from "../data/parkLayout";
 import { buildBuildings } from "./buildings";
@@ -66,6 +67,11 @@ const VIGNETTE_CLEARINGS: readonly (readonly [number, number, number])[] = [
 ];
 const inVignette = (x: number, z: number): boolean =>
   VIGNETTE_CLEARINGS.some(([vx, vz, r]) => Math.hypot(x - vx, z - vz) < r);
+
+/** Scavenger stars must stay FINDABLE — no canopy within 5 m (a blanket
+ * tree swallowed the Haunted Mansion lawn star in playtest). */
+const nearStar = (x: number, z: number): boolean =>
+  STARS.some((s) => Math.hypot(x - s.position[0], z - s.position[2]) < 5);
 
 /** Which tree species each land grows. */
 const TREE_SPECIES: Partial<Record<LandId, "round" | "palm" | "pine">> = {
@@ -221,7 +227,7 @@ function generatePropPlacements(seed: number): PropPlacements {
       if (LANDMARKS.some((l) => Math.hypot(p[0] - l.position[0], p[1] - l.position[1]) < 15)) {
         continue;
       }
-      if (inVignette(p[0], p[1])) continue;
+      if (inVignette(p[0], p[1]) || nearStar(p[0], p[1])) continue;
       bucket.push(p);
     }
   }
@@ -334,7 +340,7 @@ function generatePropPlacements(seed: number): PropPlacements {
         if (!overJungle && nearPath(x, z)) continue;
         if (Math.hypot(x - 1, z - 55) < 10) continue; // Partners circle
         if (LANDMARKS.some((l) => Math.hypot(x - l.position[0], z - l.position[1]) < 16)) continue;
-        if (inVignette(x, z)) continue;
+        if (inVignette(x, z) || nearStar(x, z)) continue;
         if (inBlocker(x, z)) continue;
         const land = landAt(x, z);
         const keep = KEEP_BY_LAND[land?.id ?? "hub"] ?? 0.85;
