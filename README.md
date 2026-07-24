@@ -25,15 +25,27 @@ Town Square looking up Main Street at Sleeping Beauty Castle.
   Frontierland, Critter Country, Fantasyland, Mickey's Toontown,
   Tomorrowland, and the Central Plaza, laid out from real OSM footprints,
   ringed by the railroad berm (you can't leave the park).
-- **Landmarks**: bespoke Sleeping Beauty Castle, Main Street Station, the
-  Matterhorn, Space Mountain, the Enchanted Tiki Room, Pirates of the
-  Caribbean, the Haunted Mansion, Big Thunder buttes, and it's a small world.
+- **Landmarks**: bespoke Sleeping Beauty Castle (walk straight through the
+  gate), Main Street Station, the Matterhorn, Space Mountain, Pirates of the
+  Caribbean, the Haunted Mansion, Big Thunder hoodoos, it's a small world,
+  Tiana's Bayou Adventure, the Enchanted Tiki Room, an Indiana Jones jungle
+  temple, and the Adventureland Treehouse.
+- **Rides & vignettes**: King Arthur Carrousel, Dumbo, the Mad Tea Party,
+  Monstro at the Storybook canal, the Finding Nemo lagoon with submarines
+  cruising the water, and the Astro Orbitor spinning at Tomorrowland's edge —
+  several of them animated.
+- **Themed land gateways**: archways at the hub spokes announce Adventureland,
+  Frontierland (over its entrance bridge), and Tomorrowland.
+- **True-to-map layout**: culled to what the guest map actually shows, blanketed
+  in tree canopy between the walkways, ringed by the railroad berm with real
+  walk-under bridges wherever a path crosses the tracks.
 - **Day/night toggle** with a smooth 4-second transition. At night thousands
   of emissive windows, string lights, and lamp globes bloom to life and the
   castle is floodlit.
 - **Per-land music zones** that crossfade as you cross land boundaries.
 - **Ambient crowds**: wandering guests fill the walkways at a typical-day
-  density, with a quiet crowd-murmur audio bed under the land music.
+  density (many in Mickey ears), with a quiet crowd-murmur audio bed under the
+  land music. NPCs obey the same walkable grid you do.
 - **Scavenger hunt**: 12 golden stars found in sequence, clue by clue, ending
   with fireworks over the castle.
 - **AI tour guide**: a Gemini-powered guide who knows where you are and gives
@@ -41,12 +53,16 @@ Town Square looking up Main Street at Sleeping Beauty Castle.
 
 ## Custom audio
 
-Silent placeholders ship in `public/audio/` so the app runs as-is. Drop your
-own MP3s into that folder using the exact filenames listed in
-[src/config/audio.ts](src/config/audio.ts) (e.g. `main-street.mp3`,
-`fantasyland.mp3`), or edit that file to point at different paths. Volume and
-mute live in the HUD; audio starts after your first click (browser autoplay
-policy).
+Each land has its own looping background track in `public/audio/` — one MP3 per
+zone (`main-street.mp3`, `adventureland.mp3`, `fantasyland.mp3`, `tomorrowland.mp3`,
+and so on), plus `crowd.mp3` for the always-on ambient murmur. They crossfade as
+you drift across land boundaries.
+
+Bring your own music: drop replacement files into `public/audio/` using the
+exact filenames mapped in [src/config/audio.ts](src/config/audio.ts), or edit
+that file to point at different paths. Prefer silence? `npm run gen:audio`
+regenerates silent placeholders for every zone. Volume and mute live in the HUD;
+audio starts after your first click (browser autoplay policy).
 
 ## Gemini tour guide key
 
@@ -80,7 +96,7 @@ to the console.
 
 ## Adjusting the crowds
 
-The park always shows a typical average day (level 5/10, set as
+The park always shows a typical average day (level 6/10, set as
 `AVERAGE_LEVEL` in [src/main.ts](src/main.ts)). The full historical crowd
 model still lives in [src/config/crowds.ts](src/config/crowds.ts) and backs
 the dev URL params — `?date=2026-12-28&hour=14` reproduces any date's
@@ -98,6 +114,7 @@ density (Christmas week is packed; a September Wednesday is empty).
 | `npm run verify` | headless screenshot suite — every viewpoint in day + night into `verify/` |
 | `npm run gen:audio` | regenerate silent placeholder MP3s |
 | `npm run fetch:osm` | re-fetch the OpenStreetMap layout bake (maintenance) |
+| `npm run filter:map` | cull the raw OSM bake down to the guest map (maintenance) |
 
 ## Dev URL parameters
 
